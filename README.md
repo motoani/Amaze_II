@@ -18,6 +18,16 @@ A design principle is that a world can be built for a new game without modificat
 
 Presently, true NPCs are not included although a simple animated NPC could be built to have limited interaction with the player.
 
+### Credits
+
+During the project I've used fonts and textures from various free-for-non-commerical sites and list some here. If your work is included and overlooked, I apologise, please let me know and I'll acknowledge or remove as required.
+
+- Nesto Beryl font: https://www.fontspace.com/nesto-beryl42-font-f86660
+- Wood panel texture : https://www.deviantart.com/devin-busha/art/Wood-Study-3-147242468
+- Rug: https://www.pennymorrison.com/products/multi-roman-woven-rug
+ a site that sells real rugs!
+- Bookcase: https://pngtree.com/freepng/illustrated-bookcase-sticker-vector_11083205.html
+
 ## How it works
 
 The code is well commented but here's a narrative of waht is going on in the program.
