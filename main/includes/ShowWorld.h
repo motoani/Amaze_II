@@ -1,4 +1,5 @@
 #pragma once
+#include "amaze_II_main.h"
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>

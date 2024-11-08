@@ -41,6 +41,8 @@ extern Vec3f direction;
 extern Time_tracked time_report; // Health and fps etc for reporting
 extern QueueHandle_t game_event_queue; // A FreeRTOS queue to pass game play events from world to manager
 
+extern uint32_t g_scWidth, g_scHeight; // Defined in main
+
 // This module maintains the 2D overlay description but not the actual buffer
 TwoD_overlay score_overlay;
 
@@ -48,6 +50,7 @@ bool OverlayFlag = false;
 
 void ShowWorld(void * parameter)
 {
+
 static const char *TAG = "ShowWorld";
 static uint32_t max_pixel_count = 5 * g_scHeight * g_scWidth ; // Pick a start value to initialise
 static int64_t elapsed_time = esp_timer_get_time(); // Internal microsecond clock
@@ -223,7 +226,12 @@ control_not_pressed = true; // Assume this to be the case
 static uint32_t last_event = 0;
 uint32_t this_event=0;
 
-if (!gpio_get_level(CONTROL_UP))
+// Options for 2 or 3 button control
+#ifdef CONTROL_UP
+  if (!gpio_get_level(CONTROL_UP))
+#else
+  if (!gpio_get_level(CONTROL_LEFT) & !gpio_get_level(CONTROL_RIGHT) )
+#endif
   {
     bool found = false;
     control_not_pressed = false;
@@ -337,6 +345,7 @@ if (!gpio_get_level(CONTROL_LEFT))
 
 void SendFlippedFrame(void)
 {
+
   // Signal that DMA is use
 xEventGroupClearBits( raster_event_group, CLEAR_READY);
 
@@ -346,13 +355,13 @@ xEventGroupClearBits( raster_event_group, CLEAR_READY);
 // The queues may be needed in this module so removed reset in SendQueue
 if (flipped)
   {
-    ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, g_scWidth, g_scWidth, frame_buffer_B));
+    ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, g_scWidth, g_scHeight, frame_buffer_B));
     EmptyQueue(2);
     EmptyQueue(3);
   }
 else
   {
-    ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, g_scWidth, g_scWidth, frame_buffer_A));
+    ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, g_scWidth, g_scHeight, frame_buffer_A));
     EmptyQueue(0);
     EmptyQueue(1);
   }

@@ -8,7 +8,7 @@
 // https://www.fontspace.com/nesto-beryl42-font-f86660
 // Background is 0x0000 but likely affected by anti-aliasing
 
-// Information defined in the structure array at the end of thsi file
+// Information defined in the structure array at the end of this file
 /*
 Font_numbers nesto[2] = {
     {

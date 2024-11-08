@@ -85,7 +85,7 @@ void MakeQueue(const uint32_t tri_count, const uint32_t block)
 
     if (!this_ptr) // manage failure to allocate
     {
-        show_error("Failed to allocate triangle queue");
+        assert("Failed to allocate triangle queue");
     }
     BlockA[block].size = tri_count; // Record size
     BlockA[block].count = 0; // and it's now empty
@@ -111,6 +111,12 @@ void EmptyQueue(const uint32_t block)
 uint32_t QueueTriangle(const TriToRaster triangle, const uint32_t block)
 {
     // sizeof(triangle) is >70  bytes with multiple elements of the struct
+    if (BlockA[block].count >= BlockA[block].size)
+    {
+        //ESP_LOGI(TAG,"Block %d queue overflow",(int)block);
+        BlockA[block].count = BlockA[block].size - 1; // Don't let it leak
+        return (0); // Nothing extra placed on queue, so later triangles skipped 
+    }
     // Put the passed triangle into the memory space as if an array
     // It's inefficient as tiles pass a matrix that's the same many times...
     BlockA[block].itemptr[BlockA[block].count] = triangle;
@@ -118,11 +124,6 @@ uint32_t QueueTriangle(const TriToRaster triangle, const uint32_t block)
     // Increment the counter
     BlockA[block].count++;
 
-        if (BlockA[block].count >= BlockA[block].size)
-        {
-            ESP_LOGI(TAG,"Block %d queue overflow",(int)block);
-            show_error("Triangle queue overflow"); // Manage buffer overflow
-        }
         // Use the bounding box to (over)estimate how many pixels will be placed although
         // it will be correct for tiles in odd block
         uint32_t pixel_estimate = (uint32_t)((triangle.BoBox.m_MaxX - triangle.BoBox.m_MinX) * (triangle.BoBox.m_MaxY - triangle.BoBox.m_MinY));

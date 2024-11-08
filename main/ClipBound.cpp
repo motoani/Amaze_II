@@ -7,6 +7,8 @@
 
 #include "ClipBound.h"
 
+extern uint32_t g_scWidth, g_scHeight; // Link to the viewport dimensions
+
 
 // Although the homogenous coordinate sytem renders triangles off screen well it wastes time
 // on triangles crossing frustrum as it returns a full bounding box
@@ -15,7 +17,7 @@
 
 unsigned int ExecuteFullTriangleClipping(const Vec4f& v0Clip, const Vec4f& v1Clip, const Vec4f& v2Clip, Rect2D* pBbox)
 {
-    
+
         // Clip-space positions are to be bounded by:
         // -w < x < w   -> LEFT/RIGHT
         // -w < y < w   -> TOP/BOTTOM
@@ -90,8 +92,8 @@ unsigned int ExecuteFullTriangleClipping(const Vec4f& v0Clip, const Vec4f& v1Cli
         (v1Clip.z <= v1Clip.w) &&
         (v2Clip.z <= v2Clip.w);
 
-    float width = g_scWidth; // Not ideal but quick and easy
-    float height = g_scHeight;
+    const float width = (float)g_scWidth; // Not ideal but quick and easy
+    const float height = (float)g_scHeight;
 
     if (allOutsideLeftPlane ||
         allOutsideRightPlane ||

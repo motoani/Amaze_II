@@ -1,7 +1,7 @@
 
 // Note that SDK config has 128k reserved for DMA etc in internal memory
 // 2 x 32k is needed for frame_buffer_A and _B, depth buffer is ok via cache though
-
+#include "amaze_II_main.h"
 
 #include <stdint.h>
 #include <vector>
@@ -31,6 +31,7 @@
 
 #include "buttons.h"
 #include "title.h" // A 128 square title screen ideally
+#include "GradientBar.h"
 
 #include "events_global.h"
 #include "wr_gpio.h"
@@ -47,10 +48,31 @@
 
 // The background colour for clearing screen which is made from fog
 extern constexpr uint32_t fog = 0x00303030;
-extern constexpr uint16_t BackgroundColour = ((fog >> 8) & 0b1111100000000000) | ((fog >> 5) & 0b0000011111100000) | ((fog >> 3) & 0b0000000000011111);
+extern const uint16_t BackgroundColour = SwapBytes(((fog >> 8) & 0b1111100000000000) | ((fog >> 5) & 0b0000011111100000) | ((fog >> 3) & 0b0000000000011111));
 
+// The actual pixels of the display unit
+#ifdef T_DISPLAY_S3_GAMER
+    extern const uint32_t display_physical_height = 170;
+    extern const uint32_t display_physical_width = 320;
 
-uint32_t * world_dummy;
+    const auto queue_size = 4500; // Size of each of 4 tri queues to rasterise
+#endif
+#ifdef T_QT_PRO
+    extern const uint32_t display_physical_height = 128;
+    extern const uint32_t display_physical_width = 128;
+
+    // There's only 2MB PSRAM on the small unit
+    const auto queue_size = 1800; // Size of each of 4 tri queues to rasterise
+#endif
+
+// Size of the game view port must be multiples of 8 for MMU caching perhaps?
+// Basic aim is for 128 x 128 but will be reduced on smaller units that are only 128 at best
+// There are also limits on memory allocation for large screens which don't always post errors
+// This isn't robust for small screens either!
+extern constexpr auto g_scWidth = std::min( (uint32_t)128, 8 * ((display_physical_width - (gradbar_space + gradbar_w)) / 8) );
+extern constexpr auto g_scHeight = std::min( (uint32_t)128, display_physical_height);
+
+    uint32_t * world_dummy;
 
 std::vector<WorldLayout> the_layouts; // Global presently but not good idea
 
@@ -88,12 +110,12 @@ extern "C" void app_main(void)
     const int64_t startup_time = esp_timer_get_time(); // Internal microsecond clock
 
     ESP_LOGI(TAG, "Allocating memory for frame buffers");
-    // allocate a screen buffer but must be on 32 byte boundary it seems for cache flush to work
-    void *mem = malloc(sizeof(uint16_t) * EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES + EXAMPLE_PSRAM_DATA_ALIGNMENT - 1);
+    // allocate a screen buffer but must be on 64 byte boundary it seems for cache flush to work
+    void *mem = malloc(sizeof(uint16_t) * display_physical_height * display_physical_width + EXAMPLE_PSRAM_DATA_ALIGNMENT - 1);
     uint16_t *pix = (uint16_t *)(((uintptr_t)mem + EXAMPLE_PSRAM_DATA_ALIGNMENT - 1) & ~ (uintptr_t)(EXAMPLE_PSRAM_DATA_ALIGNMENT - 1));
     // The below should work better without cache etc but it leaves screen gaps
     //uint16_t * pix = (uint16_t *)heap_caps_aligned_alloc(0x04 , sizeof(uint16_t) * EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES , MALLOC_CAP_DMA);
-    if ( pix == NULL) assert("malloc for full screen buffer failed");
+    if ( mem == NULL) assert("malloc for full screen buffer failed");
 
     // Make frame buffers
     frame_buffer_A = (uint16_t *)heap_caps_malloc(sizeof(uint16_t) * g_scWidth * g_scHeight , MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA | MALLOC_CAP_32BIT);
@@ -116,40 +138,42 @@ extern "C" void app_main(void)
      
     // Build the structures that make lcd handles
     esp_lcd_panel_io_handle_t io_handle = NULL;
-    init_lcd_i80_bus(&io_handle);
+    
+    init_lcd_bus(&io_handle);
     init_lcd_panel(io_handle, &panel_handle);
-
+    
     // Clear the WHOLE screen, not just out display area
-    for (int i=0;i<EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES;i++)
+    for (auto i=0; i<display_physical_width * display_physical_height; i++)
     {
-        pix[i]= 0x0000; // Black screen rather than background
+        pix[i] = 0x0000; // Black screen rather than background
+    }
+
+    // Copy the title screen into top left area, cropping if pysical is smaller than title
+    for (auto w = 0; w < std::min(display_physical_width, (uint32_t)TITLE_W); w++)
+    {
+        for (auto h = 0; h < std::min(display_physical_height,(uint32_t)TITLE_H); h++)
+        {
+            pix[ (h*display_physical_width) + w ] = SwapBytes(amaze_2_title [h * TITLE_W + w]);
+        }
     }
 
     // Flush the cache to move data to RAM where the DMA can pick it up
-    ESP_ERROR_CHECK(esp_cache_msync((void *)pix, (size_t) sizeof(uint16_t) * EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES, ESP_CACHE_MSYNC_FLAG_DIR_C2M));
+    ESP_ERROR_CHECK(esp_cache_msync((void *)pix, (size_t) sizeof(uint16_t) * display_physical_width * display_physical_height, ESP_CACHE_MSYNC_FLAG_DIR_C2M));
     
-    ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, EXAMPLE_LCD_H_RES, EXAMPLE_LCD_V_RES, pix));
-    ESP_LOGI(TAG, "Clear screen pixels sent");
-
-    // Check previous DMA completed
-    xEventGroupWaitBits(
-        raster_event_group,               // event group handle
-        CLEAR_READY,                        // bits to wait for
-        pdTRUE,                            // clear the bit once we've started
-        pdTRUE,                           //  AND for any of the defined bits
-        portMAX_DELAY );                   //  block forever
-    // Send the title screen, usually the same size as game area
-    // Done by DMA so background work can be ongoing
-    ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, TITLE_W, TITLE_H, amaze_2_title));
-
+    ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, display_physical_width, display_physical_height, pix));
+    ESP_LOGI(TAG, "Clear screen and title pixels sent");
+    
     ESP_LOGI(TAG, "Set up buttons on GPIO");
     // Set up the game board for play
-    set_input_pin(CONTROL_A);
-    set_input_pin(CONTROL_B);
+    //set_input_pin(CONTROL_A);
+    //set_input_pin(CONTROL_B);
     set_input_pin(CONTROL_LEFT);
     set_input_pin(CONTROL_RIGHT);
-    set_input_pin(CONTROL_UP);
-    set_input_pin(CONTROL_DOWN);
+    
+    #ifdef CONTROL_UP
+        set_input_pin(CONTROL_UP);
+    #endif
+    //set_input_pin(CONTROL_DOWN);
 
     ESP_LOGI(TAG,"Making depth buffers and queues");
     MakeDepthBuffer();
@@ -158,11 +182,11 @@ extern "C" void app_main(void)
     // more spaces than even though chunks are sent.
     // Queue 1 / 3 could be especially large as it's definitely all tiles!
     // MakeQueue() also sets queues to be empty so first rasterise will be rapidly returned 
-    MakeQueue(6000, 0); // Set up storage space for triangle buffering
-    MakeQueue(5000, 1); 
+    MakeQueue(queue_size, 0); // Set up storage space for triangle buffering
+    MakeQueue(queue_size, 1); 
 
-    MakeQueue(6000, 2); // To permit pingpong in dual core
-    MakeQueue(5000, 3);
+    MakeQueue(queue_size, 2); // To permit pingpong in dual core
+    MakeQueue(queue_size, 3);
 
     ProjectionMatrix(); // Make the projection/perspective matrix for triangle rendering
 
@@ -267,6 +291,26 @@ extern "C" void app_main(void)
         StopOverlayTwoD // The overlay callback
         );
     if (track_handle_p == NULL) assert("Create popup xTimerCreate failed");
+
+    // Clear the screen of the title etc just before gameplay begins
+    // Check previous DMA completed
+    xEventGroupWaitBits(
+        raster_event_group,               // event group handle
+        CLEAR_READY,                        // bits to wait for
+        pdTRUE,                            // clear the bit once we've started
+        pdTRUE,                           //  AND for any of the defined bits
+        portMAX_DELAY );                   //  block forever
+    
+    for (auto i=0; i<display_physical_width * display_physical_height; i++)
+    {
+        pix[i] = 0x0000; // Black screen rather than background
+    }
+
+    // Flush the cache to move data to RAM where the DMA can pick it up
+    ESP_ERROR_CHECK(esp_cache_msync((void *)pix, (size_t) sizeof(uint16_t) * display_physical_width * display_physical_height, ESP_CACHE_MSYNC_FLAG_DIR_C2M));
+    
+    ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, display_physical_width, display_physical_height, pix));
+    ESP_LOGI(TAG, "Final clear screen sent");
 
     // Note that if the stacks here are too big the tasks will not run BUT
     // the create error will not be shown!!

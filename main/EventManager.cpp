@@ -17,6 +17,7 @@
 #include "events_global.h"
 
 #include "ShowWorld.h"
+#include "RasteriseBox.h" // For SwapBytes
 
 #include "GradientBar.h"
 #include "numberfont.h" // 10 digits as a bitmap for use as a 'font' and 'game over'
@@ -27,6 +28,8 @@ extern std::vector<EachLayout> world; // An unsized vector of layouts each of wh
 extern TimerHandle_t track_handle_p; // Handle for popup removal timer
 extern bool OverlayFlag; // Causes the 2D overlay to be added 
 extern uint16_t * overlay_buffer; // 2D buffer allocated in start-up
+extern uint32_t g_scWidth, g_scHeight; // Defined in main
+
 
 // Track parameters and report occasionally
 Time_tracked time_report;
@@ -190,21 +193,21 @@ void EvntHealthBar(const uint16_t health)
     extern esp_lcd_panel_handle_t panel_handle;
     extern EventGroupHandle_t raster_event_group;
 
-    const uint32_t horiz_space = 4; // A space between world window and the bar
-    static uint16_t bar_buffer[GRADBAR_H * GRADBAR_W]; // Make an empty graphic bar
+    //const uint32_t horiz_space = 4; // A space between world window and the bar
+    static uint16_t bar_buffer[gradbar_buffer_size]; // Make an empty graphic bar
 
     // A bar is built in RAM with black top part and coloured gradient lower
     // +1 so that initial 127 shows as the full health bar of 128 lines
-    const auto transition_index = (GRADBAR_W * (GRADBAR_H - health)); 
+    const auto transition_index = (gradbar_w * (gradbar_h - health)); 
 
     // Copy the lower part of gradient-coloured bar as required
-    for (int i = transition_index; i < (GRADBAR_H * GRADBAR_W); i++)
+    for (auto i = transition_index; i < gradbar_buffer_size; i++)
     {
-        bar_buffer[i] = gradient_bar[i];
+        bar_buffer[i] = SwapBytes(gradient_bar[i]);
     }
-
+    
     // Blank out the top part as required, for loop is good as it allows zero executions
-    for (int i = 0; i < transition_index; i++)
+    for (auto i = 0; i < transition_index; i++)
     {
         bar_buffer[i] = 0x0000;
     }
@@ -225,8 +228,8 @@ void EvntHealthBar(const uint16_t health)
     // MUTEX or use the event  flag?
     // Perhaps this should go inside the world screen for the minature devices?
     ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel_handle,
-        g_scWidth + horiz_space + 0, 0, // Start and end of the complete buffer
-        g_scWidth + horiz_space + GRADBAR_W, GRADBAR_H,
+        g_scWidth + gradbar_space + 0, 0, // Start and end of the complete buffer
+        g_scWidth + gradbar_space + gradbar_w, gradbar_h,
         bar_buffer ));
 } // End of HealthBar
 
@@ -253,8 +256,8 @@ for (auto h = 0; h < this_overlay.height; h++)
     for (auto w = 0; w < this_overlay.width; w++)
     {
         const uint16_t pix_write = this_overlay.buffer[h*this_overlay.width + w];
-        // Only write non-zero pixels from source image
-        if (pix_write) frame_buffer_this[h * g_scWidth + w + start_index] = pix_write;
+        // Only write non-zero pixels from source image, swap just those
+        if (pix_write) frame_buffer_this[h * g_scWidth + w + start_index] = SwapBytes(pix_write);
     }
 }
 } // End of Overlay2D

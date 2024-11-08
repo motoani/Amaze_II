@@ -16,11 +16,8 @@
 // A global pingpong flag
 extern bool flipped;
 
-// Transform a given vertex in clip-space [-w,w] to raster-space [0, {w|h}]
-constexpr float half_width = g_scWidth/2;
-constexpr float half_height = g_scHeight/2;
-
-#define TO_RASTER(v) Vec4f((half_width * (v.x + v.w)), (half_height * (v.w - v.y)), v.z, v.w)
+// Link to display port size
+extern uint32_t g_scWidth, g_scHeight; // Defined in main
 
 #define FOV 60.0f // field of view in degrees, will be compiled into radians
 
@@ -53,13 +50,24 @@ Matrix44f proj = {
 Vec4f VS(const Vec3f& pos, const Matrix44f& V)
 {
     Vec4f result;
-    V.multVecMatrix(pos, result); // On ESP32 the dspm_mult_f32_aes32() function gives no clear advantage
+    V.multVecMatrix(pos, result); // On ESP32S3 the dspm_mult_f32_aes32() function gives no clear advantage
     return result;
 } // End of VS
 
+// Transform a given vertex in clip-space [-w,w] to raster-space [0, {w|h}]
+// This was a macro
+Vec4f ToRaster(Vec4f v)
+{
+    const float half_width = g_scWidth/2;
+    const float half_height = g_scHeight/2;
+
+    Vec4f homogenous_raster = {(half_width * (v.x + v.w)), (half_height * (v.w - v.y)), v.z, v.w};
+    return (homogenous_raster);
+} // End of ToRaster
+
 void ProjectionMatrix()
 {
-    // Build projection matrix (right-handed sysem)
+    // Build projection matrix (right-handed system)
     make_perspective((2.0f * M_PI) * (FOV / 360.0f), ((float)g_scWidth / (float)g_scHeight), nearPlane, farPlane, proj);
 }
 
@@ -130,12 +138,12 @@ float BaseTriangles(const Vec3f eye, const Vec3f direction, const uint32_t this_
                 // The area is only needed if eye is inside the base triangle
                 float oneoverarea = 1 / (edge_function(v0, v1, v2)); // Area of the triangle multiplied by 2
                 // Barycentric coordinates are the areas of the sub-triangles divided by the area of the main triangle
-                w0 *= oneoverarea;
-                w1 *= oneoverarea;
-                w2 *= oneoverarea;
+                //w0 *= oneoverarea;
+                //w1 *= oneoverarea;
+                //w2 *= oneoverarea;
 
                 // Interpolate a height from the triangle's vertices
-                found_height = w0 * v0.y + w1 * v1.y + w2 * v2.y;
+                found_height = (w0 * v0.y + w1 * v1.y + w2 * v2.y) * oneoverarea;
                 // In a 'bridge' or 'tunnel' there may be more than one face that is projected at the location
                 // A chosen one must be lower than eye
                 if (found_height < eye.y)
@@ -201,9 +209,9 @@ uint32_t CheckTriangles(const Vec3f eye, const Vec3f direction, const uint32_t t
 
         // Apply viewport transformation
         // Notice that we haven't applied homogeneous division and are still utilizing homogeneous coordinates
-        Vec4f v0Homogen = TO_RASTER(v0Clip);
-        Vec4f v1Homogen = TO_RASTER(v1Clip);
-        Vec4f v2Homogen = TO_RASTER(v2Clip);
+        const Vec4f v0Homogen = ToRaster(v0Clip);
+        const Vec4f v1Homogen = ToRaster(v1Clip);
+        const Vec4f v2Homogen = ToRaster(v2Clip);
 
         // Base vertex matrix
         Matrix33f M =

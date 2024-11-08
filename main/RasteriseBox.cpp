@@ -16,6 +16,8 @@
 float* depthBuffer; // depthBuffer restricted in scope to this unit, albeit globally
 extern uint16_t * frame_buffer_this;
 
+extern uint32_t g_scWidth, g_scHeight; // Defined in main
+
 #define TEXTURE_DEPTH_THRESHOLD 22.f // Depth at which textures are disabled and base colour sent
 
 // ************************************************************************************************
@@ -47,10 +49,10 @@ void CheckCollide(Near_pix * near)
     //uint32_t collide_colour;
     
     // Aim to do calculation at compile time, divides invovled!
-    constexpr uint32_t y_start = g_scHeight / 5;
-    constexpr uint32_t y_end = 3 * g_scHeight / 5;
-    constexpr uint32_t x_start = g_scWidth / 4;
-    constexpr uint32_t x_end = 3 * g_scWidth / 4;
+    const uint32_t y_start = g_scHeight / 5;
+    const uint32_t y_end = 3 * g_scHeight / 5;
+    const uint32_t x_start = g_scWidth / 4;
+    const uint32_t x_end = 3 * g_scWidth / 4;
 
     near->depth = farPlane; // Initial value for nearest is farClip of view
 
@@ -102,7 +104,7 @@ bool CheckEdgeFunction(const Vec3f& E, const float result)
 void RasteriseBox(const TriToRaster & tri)
 {    
     //static const char *TAG = "RasteriseBox";
-     const uint32_t idx = tri.idx; // idx is used so many times it makes sense to have this stage, compiler might delete it?
+    const uint32_t idx = tri.idx; // idx is used so many times it makes sense to have this stage, compiler might delete it?
     const Rect2D TriBoundBox = tri.BoBox;
     const Matrix33f invM = tri.invM;
     uint32_t this_colour = 0; // This will be filled with face or texture colour
@@ -427,6 +429,13 @@ void NotRasteriseBox(const TriToRaster & tri)
 // Function to write pixels to a buffer, mixes the rgb with fog based on depth
 // No merit being in IRAM
 
+uint16_t SwapBytes(uint16_t wordin)
+{
+    uint16_t temp = 0x00ff & (wordin >> 8);
+    temp = temp | (0xff00 & (wordin << 8));
+    return (temp);
+}
+
 void WritePixel2Fog888(const uint32_t frame_index, const uint32_t rgb888, const float depth)
 // Takes rgb in 888 format, which has already been adjusted by the shade
 // Mixes with the fog and finally converts to rgb565
@@ -460,11 +469,13 @@ void WritePixel2Fog888(const uint32_t frame_index, const uint32_t rgb888, const 
     const uint32_t fogged_blue = intmix(fog_blue , pix_blue , fog_depth);
     
     // Shift to divide by 'a' in intmix
-    uint16_t rgb565 = ((fogged_red) & 0b1111100000000000) | ((fogged_green >> 5) & 0b0000011111100000) | ((fogged_blue >> 11) & 0b0000000000011111);
+    //uint16_t rgb565 = ((fogged_red) & 0b1111100000000000) | ((fogged_green >> 5) & 0b0000011111100000) | ((fogged_blue >> 11) & 0b0000000000011111);
+    uint16_t swapped_rgb565 = ((fogged_red >> 8) & 0b0000000011111000) | ((fogged_green >> 13) & 0b0000000000000111) |  ((fogged_green << 3) & 0b1110000000000000) | ((fogged_blue >> 3) & 0b0001111100000000);
     
     // Using ESP-IDF the DMA routine will do the byte swap so here can be standard pack to 565
     // We have a pixel in 565 format so send it to the appropriate viewer
-    frame_buffer_this[frame_index] = rgb565;
+    //frame_buffer_this[frame_index] = SwapBytes(rgb565);
+    frame_buffer_this[frame_index] = swapped_rgb565;
 } // end of WritePixel2Fog888
 
 // adjusts input rgb according to surface shade for simple specular and diffuse illumination

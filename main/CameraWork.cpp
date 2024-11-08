@@ -32,6 +32,7 @@ void make_camera(const Vec3f direction, const Vec3f cameraPosition, Matrix44f& w
 
 // Make a perspective projection matrix, simplified from glm opensource library
 // so that can be used without glm library
+// It should be possible to make this a constexpr as all inputs are constants
 void make_perspective(
     float const fovy, // must be in radians
     float const aspect,

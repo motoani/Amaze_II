@@ -1,10 +1,15 @@
 {
   "C_Cpp.intelliSenseEngine": "default",
   "idf.flashType": "UART",
-  "idf.portWin": "COM3",
+  "idf.portWin": "COM4",
   "idf.adapterTargetName": "esp32s3",
   "files.associations": {
-    "chrono": "cpp"
+    "chrono": "cpp",
+    "algorithm": "c",
+    "limits": "c",
+    "random": "c",
+    "utility": "c",
+    "xutility": "c"
   },
   "idf.openOcdConfigs": [
     "board/esp32s3-builtin.cfg"

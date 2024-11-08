@@ -19,6 +19,8 @@ void NotRasteriseBox(const TriToRaster & tri);
 
 uint32_t spec_shade_pixel (const uint32_t rgb888, const Shade_params surface_shade);
 
+uint16_t SwapBytes(uint16_t input);
+
 void WritePixel2Fog888(const uint32_t frame_index, const uint32_t rgb888, const float depth);
 
 float FogFunction(const float depth); // end and start are set in the function

@@ -1,7 +1,8 @@
 
 idf_component_register(
     SRCS 
-        "i80_lcd_main.cpp"
+       
+        "amaze_II_main"
         "ShowWorld.cpp"
         "ClipBound.cpp"
         "CameraWork.cpp"
@@ -20,7 +21,6 @@ idf_component_register(
     INCLUDE_DIRS
         "."
         "includes"
-        "World"
     REQUIRES esp_partition esp_lcd esp_mm esp_timer
         )
 

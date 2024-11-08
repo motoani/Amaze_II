@@ -1,8 +1,11 @@
 #include <stdint.h>
+#include "amaze_II_main.h"
 
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_vendor.h"
 #include "esp_lcd_panel_ops.h"
+
+#include "esp_lcd_io_spi.h"
 
 #include "driver/gpio.h"
 
@@ -35,59 +38,63 @@ extern EventGroupHandle_t raster_event_group;
 // PCLK frequency can't go too high as the limitation of PSRAM bandwidth 2MHz
 // Datasheet suggests 66ns write cycle time which equates to 15Mhz
 // In my case I've set to use internal RAM - 10MHz fine, 20 MHZ write error
-#define EXAMPLE_LCD_PIXEL_CLOCK_HZ     (14 * 1000 * 1000)
+#ifdef T_DISPLAY_S3_GAMER
+    #define CONFIG_EXAMPLE_LCD_I80_BUS_WIDTH 8
 
-#define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL  1
-#define EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL !EXAMPLE_LCD_BK_LIGHT_ON_LEVEL
-#define EXAMPLE_PIN_NUM_DATA0          39
-#define EXAMPLE_PIN_NUM_DATA1          40
-#define EXAMPLE_PIN_NUM_DATA2          41
-#define EXAMPLE_PIN_NUM_DATA3          42
-#define EXAMPLE_PIN_NUM_DATA4          45
-#define EXAMPLE_PIN_NUM_DATA5          46
-#define EXAMPLE_PIN_NUM_DATA6          47
-#define EXAMPLE_PIN_NUM_DATA7          48
+    #define EXAMPLE_LCD_PIXEL_CLOCK_HZ     (14 * 1000 * 1000)
 
-#define EXAMPLE_PIN_NUM_PCLK           8 // Write
-#define EXAMPLE_PIN_NUM_CS             6
-#define EXAMPLE_PIN_NUM_DC             7
-#define EXAMPLE_PIN_NUM_RST            5
-#define EXAMPLE_PIN_NUM_BK_LIGHT       38
+    #define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL  1
+    #define EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL (!EXAMPLE_LCD_BK_LIGHT_ON_LEVEL)
+    #define EXAMPLE_PIN_NUM_DATA0          39
+    #define EXAMPLE_PIN_NUM_DATA1          40
+    #define EXAMPLE_PIN_NUM_DATA2          41
+    #define EXAMPLE_PIN_NUM_DATA3          42
+    #define EXAMPLE_PIN_NUM_DATA4          45
+    #define EXAMPLE_PIN_NUM_DATA5          46
+    #define EXAMPLE_PIN_NUM_DATA6          47
+    #define EXAMPLE_PIN_NUM_DATA7          48
 
-#define EXAMPLE_PIN_NUM_RD              9
+    #define EXAMPLE_PIN_NUM_PCLK           8 // Write
+    #define EXAMPLE_PIN_NUM_CS             6
+    #define EXAMPLE_PIN_NUM_DC             7
+    #define EXAMPLE_PIN_NUM_RST            5
+    #define EXAMPLE_PIN_NUM_BK_LIGHT       38
 
-// Bit number used to represent command and parameter
-#define EXAMPLE_LCD_CMD_BITS           8
-#define EXAMPLE_LCD_PARAM_BITS         8
+    #define EXAMPLE_PIN_NUM_RD              9
 
+    // Bit number used to represent command and parameter
+    #define EXAMPLE_LCD_CMD_BITS           8
+    #define EXAMPLE_LCD_PARAM_BITS         8
+#endif
+
+#ifdef T_QT_PRO
+    #include "esp_lcd_gc9a01.h" // Component must be included in idf_component.yml
+
+    #define EXAMPLE_LCD_PIXEL_CLOCK_HZ     (20 * 1000 * 1000)
+    #define EXAMPLE_PIN_NUM_BK_LIGHT 10
+    #define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL  0
+    #define EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL (!EXAMPLE_LCD_BK_LIGHT_ON_LEVEL)
+
+    // Using SPI2 as per the ESP-IDF example
+    #define LCD_HOST  SPI2_HOST
+
+    #define TFT_MISO   -1   // Not connected
+    #define TFT_MOSI   2
+    #define TFT_SCLK   3
+    #define TFT_CS     5 
+    #define TFT_DC     6
+    #define TFT_RST    1 // Connect reset to ensure display initialises
+
+    // Bit number used to represent command and parameter
+    #define EXAMPLE_LCD_CMD_BITS           8
+    #define EXAMPLE_LCD_PARAM_BITS         8
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 static bool lcd_callback(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
 {
-    /*
-    extern const uint16_t BackgroundColour; // = ((fog >> 8) & 0b1111100000000000) | ((fog >> 5) & 0b0000011111100000) | ((fog >> 3) & 0b0000000000011111);
-
-   // Once pushed to TFT the buffer can be cleared
-   // This is called when DMA is complete, in this case we can clear the buffer
-     if (flipped)
-    {
-        // Clear screen, could make a function, but is it worth it?
-        // memset() is char-based, could make this uint32_t perhaps? 
-        for (int i=0;i < 128 * 128;i++)
-        {
-            frame_buffer_B[i] = BackgroundColour; // Background colour
-        }
-    }
-    else
-        {
-        for (int i=0;i < 128 * 128;i++)
-        {
-            frame_buffer_A[i] = BackgroundColour; // Background colour
-        }
-    }
-    */
     // A flag set to show that screen is cleared so DMA or re-use of frame buffer can occur
     // DMA transfer can be slower than a fast frame which gives write errors hance need for flag
     // 10Mhz clock makes this less of a limiting rate
@@ -104,60 +111,104 @@ static bool lcd_callback(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_ev
 #ifdef __cplusplus
 extern "C" {
 #endif
-void init_lcd_i80_bus(esp_lcd_panel_io_handle_t *io_handle)
-{
-    ESP_LOGI(TAG, "Initialize Intel 8080 bus");
 
-    esp_lcd_i80_bus_handle_t i80_bus = NULL;
-    esp_lcd_i80_bus_config_t bus_config = {
-        .dc_gpio_num = EXAMPLE_PIN_NUM_DC,
-        .wr_gpio_num = EXAMPLE_PIN_NUM_PCLK,
-        .clk_src = LCD_CLK_SRC_DEFAULT,
-        .data_gpio_nums = {
-            EXAMPLE_PIN_NUM_DATA0,
-            EXAMPLE_PIN_NUM_DATA1,
-            EXAMPLE_PIN_NUM_DATA2,
-            EXAMPLE_PIN_NUM_DATA3,
-            EXAMPLE_PIN_NUM_DATA4,
-            EXAMPLE_PIN_NUM_DATA5,
-            EXAMPLE_PIN_NUM_DATA6,
-            EXAMPLE_PIN_NUM_DATA7,
-        },
-        .bus_width = CONFIG_EXAMPLE_LCD_I80_BUS_WIDTH,
-        .max_transfer_bytes = EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES * sizeof(uint16_t),
-        .psram_trans_align = EXAMPLE_PSRAM_DATA_ALIGNMENT,
-        .sram_trans_align = 4,
-    };
-    ESP_ERROR_CHECK(esp_lcd_new_i80_bus(&bus_config, &i80_bus));
+    // Aim to transfer a whole screen by DMA if possible
+    extern uint32_t display_physical_height;
+    extern uint32_t display_physical_width;
 
-    esp_lcd_panel_io_i80_config_t io_config = {
-        .cs_gpio_num = EXAMPLE_PIN_NUM_CS,
+    //uint32_t max_transfer = (display_physical_height * display_physical_width * sizeof(uint16_t));
+
+    
+    void init_lcd_bus(esp_lcd_panel_io_handle_t *io_handle)
+    {
+    #ifdef T_DISPLAY_S3_GAMER
+
+        ESP_LOGI(TAG, "Initialize Intel 8080 bus");
+
+        esp_lcd_i80_bus_handle_t i80_bus = NULL;
+        esp_lcd_i80_bus_config_t bus_config = {
+            .dc_gpio_num = EXAMPLE_PIN_NUM_DC,
+            .wr_gpio_num = EXAMPLE_PIN_NUM_PCLK,
+            .clk_src = LCD_CLK_SRC_DEFAULT,
+            .data_gpio_nums = {
+                EXAMPLE_PIN_NUM_DATA0,
+                EXAMPLE_PIN_NUM_DATA1,
+                EXAMPLE_PIN_NUM_DATA2,
+                EXAMPLE_PIN_NUM_DATA3,
+                EXAMPLE_PIN_NUM_DATA4,
+                EXAMPLE_PIN_NUM_DATA5,
+                EXAMPLE_PIN_NUM_DATA6,
+                EXAMPLE_PIN_NUM_DATA7,
+            },
+            .bus_width = CONFIG_EXAMPLE_LCD_I80_BUS_WIDTH,
+            .max_transfer_bytes = (display_physical_height * display_physical_width * sizeof(uint16_t)),
+            .psram_trans_align = EXAMPLE_PSRAM_DATA_ALIGNMENT,
+            .sram_trans_align = 4,
+        };
+        ESP_ERROR_CHECK(esp_lcd_new_i80_bus(&bus_config, &i80_bus));
+
+        esp_lcd_panel_io_i80_config_t io_config = {
+            .cs_gpio_num = EXAMPLE_PIN_NUM_CS,
+            .pclk_hz = EXAMPLE_LCD_PIXEL_CLOCK_HZ,
+            .trans_queue_depth = 10,
+            .on_color_trans_done = lcd_callback,
+            .lcd_cmd_bits = EXAMPLE_LCD_CMD_BITS,
+            .lcd_param_bits = EXAMPLE_LCD_PARAM_BITS,
+            .dc_levels = {
+                .dc_idle_level = 0,
+                .dc_cmd_level = 0,
+                .dc_dummy_level = 0,
+                .dc_data_level = 1,
+            },
+            .flags = {
+                .swap_color_bytes = false, // We can't use it here as SPI won't do it
+            },
+            //.user_ctx = user_ctx,
+        };
+        ESP_ERROR_CHECK(esp_lcd_new_panel_io_i80(i80_bus, &io_config, io_handle));
+
+        ESP_LOGI(TAG, "Set RD pin high"); // This is CRITICAL but isn't in driver information
+        gpio_config_t rd_gpio_config = {
+            .pin_bit_mask = 1ULL << EXAMPLE_PIN_NUM_RD,
+            .mode = GPIO_MODE_OUTPUT,
+        };
+        ESP_ERROR_CHECK(gpio_config(&rd_gpio_config));
+        gpio_set_level((gpio_num_t) EXAMPLE_PIN_NUM_RD, 1);
+    #endif // End of I80 LCD bus assignment
+
+    #ifdef T_QT_PRO
+        ESP_LOGI(TAG, "Initialize LCD SPI bus");
+        spi_bus_config_t buscfg = {
+            .sclk_io_num = TFT_SCLK,
+            .mosi_io_num = TFT_MOSI,
+            .miso_io_num = TFT_MISO,
+            .quadwp_io_num = -1,
+            .quadhd_io_num = -1,
+            .max_transfer_sz = (display_physical_height * display_physical_width * sizeof(uint16_t)),
+        };
+    ESP_ERROR_CHECK(spi_bus_initialize(LCD_HOST, &buscfg, SPI_DMA_CH_AUTO)); // Enable the DMA feature
+
+    ESP_LOGI(TAG, "Install panel IO");
+    esp_lcd_panel_io_spi_config_t io_config = {
+        .dc_gpio_num = TFT_DC,
+        .cs_gpio_num = TFT_CS,
         .pclk_hz = EXAMPLE_LCD_PIXEL_CLOCK_HZ,
-        .trans_queue_depth = 10,
-        .on_color_trans_done = lcd_callback,
         .lcd_cmd_bits = EXAMPLE_LCD_CMD_BITS,
         .lcd_param_bits = EXAMPLE_LCD_PARAM_BITS,
-        .dc_levels = {
-            .dc_idle_level = 0,
-            .dc_cmd_level = 0,
-            .dc_dummy_level = 0,
-            .dc_data_level = 1,
-        },
-        .flags = {
-            .swap_color_bytes = true, // Swap to be done by DMA hardware
-        },
+        .spi_mode = 0,
+        .trans_queue_depth = 10,
+        .on_color_trans_done = lcd_callback,
         //.user_ctx = user_ctx,
-    };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_io_i80(i80_bus, &io_config, io_handle));
+        }; // Can't swap bytes here
+    // Attach the LCD to the SPI bus
+    ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)LCD_HOST, &io_config, io_handle));
 
-    ESP_LOGI(TAG, "Set RD pin high"); // This is CRITICAL but isn't in driver information
-    gpio_config_t rd_gpio_config = {
-        .pin_bit_mask = 1ULL << EXAMPLE_PIN_NUM_RD,
-        .mode = GPIO_MODE_OUTPUT,
-    };
-    ESP_ERROR_CHECK(gpio_config(&rd_gpio_config));
-    gpio_set_level((gpio_num_t) EXAMPLE_PIN_NUM_RD, 1);
-} // End of init_lcd_i80_bus
+    #endif // End of QT_PRO assigment
+
+    } // End of init_lcd_bus
+
+
+
 #ifdef __cplusplus
 }
 #endif
@@ -165,6 +216,7 @@ void init_lcd_i80_bus(esp_lcd_panel_io_handle_t *io_handle)
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 void init_lcd_panel(esp_lcd_panel_io_handle_t io_handle, esp_lcd_panel_handle_t *panel)
 {
 #if EXAMPLE_PIN_NUM_BK_LIGHT >= 0
@@ -177,6 +229,7 @@ void init_lcd_panel(esp_lcd_panel_io_handle_t io_handle, esp_lcd_panel_handle_t 
     gpio_set_level((gpio_num_t) EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL);
 #endif // EXAMPLE_PIN_NUM_BK_LIGHT >= 0
 
+#ifdef T_DISPLAY_S3_GAMER
     ESP_LOGI(TAG, "Install LCD driver of st7789");
     esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = EXAMPLE_PIN_NUM_RST,
@@ -231,7 +284,32 @@ ESP_ERROR_CHECK(esp_lcd_panel_io_tx_param(io_handle,ST7789_NVGAMCTRL,(uint8_t[])
 
 // Now we are set up activate the display
 ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(*panel, true));
+#endif // End of T_DISPLAY_GAMER
 
+#ifdef T_QT_PRO
+
+    esp_lcd_panel_dev_config_t panel_config = {
+        .reset_gpio_num = TFT_RST,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,
+        .bits_per_pixel = 16,
+    }; // It should be possible to set Endian here but can't work out API
+    ESP_LOGI(TAG, "Install GC9A01 panel driver");
+    ESP_ERROR_CHECK(esp_lcd_new_panel_gc9a01(io_handle, &panel_config, panel));
+
+    ESP_ERROR_CHECK(esp_lcd_panel_reset(* panel));
+    ESP_ERROR_CHECK(esp_lcd_panel_init(* panel));
+    ESP_ERROR_CHECK(esp_lcd_panel_invert_color(* panel, true));
+    // Rotate LCD display to suit buttons
+    //ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(* panel, false));
+    ESP_ERROR_CHECK(esp_lcd_panel_mirror(* panel, true, true));
+    
+    ESP_ERROR_CHECK(esp_lcd_panel_set_gap(* panel,2,2)); // Trial and error to centre
+
+    ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(* panel, true));
+
+#endif // End of T_QT_PRO
+
+// Generic for various display types
 #if EXAMPLE_PIN_NUM_BK_LIGHT >= 0
     ESP_LOGI(TAG, "Turn on LCD backlight");
     gpio_set_level((gpio_num_t) EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL);

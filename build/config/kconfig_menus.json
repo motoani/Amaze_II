@@ -29437,6 +29437,116 @@
                 "id": "component-config-wi-fi-provisioning-manager",
                 "title": "Wi-Fi Provisioning Manager",
                 "type": "menu"
+            },
+            {
+                "children": [
+                    {
+                        "children": [
+                            {
+                                "children": [],
+                                "depends_on": "CU_RELINKER_ENABLE",
+                                "help": "\"Enable this option to print error information instead of\n    throwing exception when missing function\"",
+                                "id": "CU_RELINKER_ENABLE_PRINT_ERROR_INFO_WHEN_MISSING_FUNCTION",
+                                "name": "CU_RELINKER_ENABLE_PRINT_ERROR_INFO_WHEN_MISSING_FUNCTION",
+                                "range": null,
+                                "title": "Print error information when missing function",
+                                "type": "bool"
+                            },
+                            {
+                                "children": [
+                                    {
+                                        "children": [],
+                                        "depends_on": "CU_RELINKER_ENABLE_CUSTOMIZED_CONFIGURATION_FILES && CU_RELINKER_ENABLE",
+                                        "help": "\"Customized relinker configuration files path. This path is\nevaluated relative to the project root directory.\"",
+                                        "id": "CU_RELINKER_CUSTOMIZED_CONFIGURATION_FILES_PATH",
+                                        "name": "CU_RELINKER_CUSTOMIZED_CONFIGURATION_FILES_PATH",
+                                        "range": null,
+                                        "title": "Customized relinker configuration files path",
+                                        "type": "string"
+                                    }
+                                ],
+                                "depends_on": "CU_RELINKER_ENABLE",
+                                "help": "\"Enable this option to use customized relinker configuration\nfiles instead of default ones\"",
+                                "id": "CU_RELINKER_ENABLE_CUSTOMIZED_CONFIGURATION_FILES",
+                                "name": "CU_RELINKER_ENABLE_CUSTOMIZED_CONFIGURATION_FILES",
+                                "range": null,
+                                "title": "Enable customized relinker configuration files",
+                                "type": "bool"
+                            }
+                        ],
+                        "depends_on": null,
+                        "help": "\"Enable relinker to linker some IRAM functions to Flash\"",
+                        "id": "CU_RELINKER_ENABLE",
+                        "name": "CU_RELINKER_ENABLE",
+                        "range": null,
+                        "title": "Enable relinker",
+                        "type": "bool"
+                    },
+                    {
+                        "children": [
+                            {
+                                "children": [],
+                                "depends_on": "<choice CU_DIAGNOSTICS_COLOR>",
+                                "help": null,
+                                "id": "CU_DIAGNOSTICS_COLOR_NEVER",
+                                "name": "CU_DIAGNOSTICS_COLOR_NEVER",
+                                "range": null,
+                                "title": "never",
+                                "type": "bool"
+                            },
+                            {
+                                "children": [],
+                                "depends_on": "<choice CU_DIAGNOSTICS_COLOR>",
+                                "help": null,
+                                "id": "CU_DIAGNOSTICS_COLOR_ALWAYS",
+                                "name": "CU_DIAGNOSTICS_COLOR_ALWAYS",
+                                "range": null,
+                                "title": "always",
+                                "type": "bool"
+                            },
+                            {
+                                "children": [],
+                                "depends_on": "<choice CU_DIAGNOSTICS_COLOR>",
+                                "help": null,
+                                "id": "CU_DIAGNOSTICS_COLOR_AUTO",
+                                "name": "CU_DIAGNOSTICS_COLOR_AUTO",
+                                "range": null,
+                                "title": "auto",
+                                "type": "bool"
+                            }
+                        ],
+                        "depends_on": null,
+                        "help": "Use color in diagnostics. \"never\", \"always\", or \"auto\". If \"always\", GCC will output\nwith color defined in GCC_COLORS environment variable. If \"never\", only output plain\ntext. If \"auto\", only output with color when the standard error is a terminal and when\nnot executing in an emacs shell.",
+                        "id": "component-config-cmake-utilities-color-in-diagnostics",
+                        "name": "CU_DIAGNOSTICS_COLOR",
+                        "title": "Color in diagnostics",
+                        "type": "choice"
+                    },
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": "\"Enable this option, users can enable GCC link time optimization(LTO)\n feature for target components or dependencies.",
+                        "id": "CU_GCC_LTO_ENABLE",
+                        "name": "CU_GCC_LTO_ENABLE",
+                        "range": null,
+                        "title": "Enable GCC link time optimization(LTO)",
+                        "type": "bool"
+                    },
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": "\"Enable this option, user can make string in designated components align\n by 1-byte instead 1-word(4-byte), this can reduce unnecessary filled data\n so that to reduce firmware size.\"",
+                        "id": "CU_GCC_STRING_1BYTE_ALIGN",
+                        "name": "CU_GCC_STRING_1BYTE_ALIGN",
+                        "range": null,
+                        "title": "GCC string 1-byte align",
+                        "type": "bool"
+                    }
+                ],
+                "depends_on": null,
+                "id": "component-config-cmake-utilities",
+                "title": "CMake Utilities",
+                "type": "menu"
             }
         ],
         "depends_on": null,
