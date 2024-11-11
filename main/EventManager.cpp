@@ -24,6 +24,8 @@
 #include "EventManager.h"
 
 extern QueueHandle_t game_event_queue; // A FreeRTOS queue to pass game play events from world to manager
+extern QueueHandle_t sound_event_queue;
+
 extern std::vector<EachLayout> world; // An unsized vector of layouts each of which can contain multiple frames
 extern TimerHandle_t track_handle_p; // Handle for popup removal timer
 extern bool OverlayFlag; // Causes the 2D overlay to be added 

@@ -25,7 +25,7 @@ float CheckHitFace(const TriToRaster & tri, const uint32_t test_x, const uint32_
 
     float z = farPlane;
 
-    // Homogenous appraoch to edge function used as triangles may extend beyond view frustrum
+    // Homogenous approach to edge function used as triangles may extend beyond view frustrum
     // Set up edge functions based on the vertex matrix
     const Vec3f E0 = { invM[0][0], invM[0][1], invM[0][2] };
     const Vec3f E1 = { invM[1][0], invM[1][1], invM[1][2] };

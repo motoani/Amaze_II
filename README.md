@@ -28,6 +28,8 @@ During the project I've used fonts and textures from various free-for-non-commer
  a site that sells real rugs!
 - Bookcase: https://pngtree.com/freepng/illustrated-bookcase-sticker-vector_11083205.html
 - Food low poly modified from: https://assetstore.unity.com/packages/3d/props/food/food-free-low-poly-asset-pack-by-ithappy-260726
+- Welcome sound effect: https://pixabay.com/sound-effects/welcome-traveler-97167/
+
 
 
 ## How it works

@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "amaze_II",
-    "project_version":    "caccdaa-dirty",
+    "project_version":    "a924979-dirty",
     "project_path":       "C:/Users/adria/Documents/VS_ESP/Amaze_II",
     "idf_path":           "C:/Users/adria/esp/v5.3/esp-idf",
     "build_dir":          "C:/Users/adria/Documents/VS_ESP/Amaze_II/build",
@@ -880,7 +880,7 @@
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "file": "C:/Users/adria/Documents/VS_ESP/Amaze_II/build/esp-idf/esp_psram/libesp_psram.a",
-            "sources": [ "C:/Users/adria/esp/v5.3/esp-idf/components/esp_psram/esp_psram.c", "C:/Users/adria/esp/v5.3/esp-idf/components/esp_psram/mmu_psram_flash.c", "C:/Users/adria/esp/v5.3/esp-idf/components/esp_psram/esp32s3/esp_psram_impl_quad.c" ],
+            "sources": [ "C:/Users/adria/esp/v5.3/esp-idf/components/esp_psram/esp_psram.c", "C:/Users/adria/esp/v5.3/esp-idf/components/esp_psram/mmu_psram_flash.c", "C:/Users/adria/esp/v5.3/esp-idf/components/esp_psram/esp32s3/esp_psram_impl_octal.c" ],
             "include_dirs": [ "include" ]
         },
         "esp_ringbuf": {
@@ -1195,7 +1195,7 @@
             "managed_reqs": [],
             "managed_priv_reqs": [ "espressif__esp_lcd_gc9a01" ],
             "file": "C:/Users/adria/Documents/VS_ESP/Amaze_II/build/esp-idf/main/libmain.a",
-            "sources": [ "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/amaze_II_main", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ShowWorld.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ClipBound.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/CameraWork.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/CheckTriangles.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ShowError.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/TriangleQueues.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/wr_gpio.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ChunkChooser.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/RasteriseBox.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/lcd_setup.c", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ParseWorld.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/FindHitFace.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/TimeTracker.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/EventManager.cpp" ],
+            "sources": [ "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/amaze_II_main", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ShowWorld.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ClipBound.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/CameraWork.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/CheckTriangles.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ShowError.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/TriangleQueues.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/wr_gpio.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ChunkChooser.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/RasteriseBox.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/lcd_setup.c", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ParseWorld.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/FindHitFace.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/TimeTracker.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/EventManager.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/i2s_sound.c" ],
             "include_dirs": [ ".", "includes" ]
         },
         "mbedtls": {

@@ -42,6 +42,7 @@
 #include "ParseWorld.h"
 #include "TimeTracker.h"
 #include "EventManager.h"
+#include "i2s_sound.h"
 
 #define LO_PLAIN 0 // A static world 
 #define LO_FLIP 1  // Flip book with some sets of vertices 
@@ -84,6 +85,7 @@ std::vector<EachLayout> world; // An unsized vector of layouts which can contain
 EventGroupHandle_t raster_event_group;
 
 QueueHandle_t game_event_queue;
+QueueHandle_t sound_event_queue;
 
 TimerHandle_t track_handle_s;
 TimerHandle_t track_handle_p;
@@ -120,9 +122,11 @@ extern "C" void app_main(void)
     // Make frame buffers
     frame_buffer_A = (uint16_t *)heap_caps_malloc(sizeof(uint16_t) * g_scWidth * g_scHeight , MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA | MALLOC_CAP_32BIT);
     if ( frame_buffer_A == NULL) assert("malloc failed for frame_buffer_A");
+    ClearWorldFrame(frame_buffer_A); // Barely needed, but it's neater!
 
     frame_buffer_B = (uint16_t *)heap_caps_malloc(sizeof(uint16_t) * g_scWidth * g_scHeight , MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA | MALLOC_CAP_32BIT);
     if ( frame_buffer_B == NULL) assert("malloc failed for frame_buffer_B");
+    ClearWorldFrame(frame_buffer_B);
 
     overlay_buffer = (uint16_t *)heap_caps_malloc(sizeof(uint16_t) * g_scWidth * g_scHeight , MALLOC_CAP_INTERNAL | MALLOC_CAP_32BIT);
     if ( overlay_buffer == NULL) assert("malloc failed for overlay_buffer");
@@ -148,7 +152,7 @@ extern "C" void app_main(void)
         pix[i] = 0x0000; // Black screen rather than background
     }
 
-    // Copy the title screen into top left area, cropping if pysical is smaller than title
+    // Copy the title screen into top left area, cropping if physical is smaller than title
     for (auto w = 0; w < std::min(display_physical_width, (uint32_t)TITLE_W); w++)
     {
         for (auto h = 0; h < std::min(display_physical_height,(uint32_t)TITLE_H); h++)
@@ -159,7 +163,7 @@ extern "C" void app_main(void)
 
     // Flush the cache to move data to RAM where the DMA can pick it up
     ESP_ERROR_CHECK(esp_cache_msync((void *)pix, (size_t) sizeof(uint16_t) * display_physical_width * display_physical_height, ESP_CACHE_MSYNC_FLAG_DIR_C2M));
-    
+        
     ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, display_physical_width, display_physical_height, pix));
     ESP_LOGI(TAG, "Clear screen and title pixels sent");
     
@@ -255,10 +259,19 @@ extern "C" void app_main(void)
     //ReadWorld(w_map_ptr , world_header_ptr , texture_map_ptr);
     //ReadWorld(w_ptr , texture_map_ptr);
 
+    // Initialise the I2S Tx system
+    i2s_init_std_simplex();
+
     // Make a queue which will take event words generated during play and apss to a manager
     // Create a queue capable of containing 10 Near_pix values which say a lot about the impact
     game_event_queue = xQueueCreate( 10, sizeof( Near_pix ) );
     if( game_event_queue == 0 ) assert("Creation of game event queue failed");
+
+    // Make a queue to send sound effect initiators to I2S module
+    // Create a queue capable of containing 5 uint16_t values which
+    // will number different sound effects
+    sound_event_queue = xQueueCreate( 5, sizeof( uint16_t ) );
+    if( sound_event_queue == 0 ) assert("Creation of sound event queue failed");
 
      // Set the initial health bar via the event queue system
     Near_pix first_event;
@@ -268,6 +281,14 @@ extern "C" void app_main(void)
             // Failed to post the message, even after 10 ticks.
             ESP_LOGI(TAG,"Failed to post item in event queue");
           }
+
+    const uint16_t welcome_code = 0x0000;
+    // Send the welcome sound effect
+    if( xQueueSend( sound_event_queue, &welcome_code, ( TickType_t ) 10 ) != pdPASS )
+      {
+      // Failed to post the message, even after 10 ticks.
+      ESP_LOGI(TAG,"Failed to post item in sound queue");
+      }
 
     // Nearly everything is done, so see if the title screen can be removed yet
     while (esp_timer_get_time() < startup_time + 1000000);
@@ -305,13 +326,22 @@ extern "C" void app_main(void)
     {
         pix[i] = 0x0000; // Black screen rather than background
     }
-
+    
     // Flush the cache to move data to RAM where the DMA can pick it up
     ESP_ERROR_CHECK(esp_cache_msync((void *)pix, (size_t) sizeof(uint16_t) * display_physical_width * display_physical_height, ESP_CACHE_MSYNC_FLAG_DIR_C2M));
     
     ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, display_physical_width, display_physical_height, pix));
     ESP_LOGI(TAG, "Final clear screen sent");
 
+    // Check previous DMA completed before allowing 1st world drawing, which may interfere
+    // as it's empty, and so frame sent rapidly
+    xEventGroupWaitBits(
+        raster_event_group,               // event group handle
+        CLEAR_READY,                        // bits to wait for
+        pdTRUE,                            // clear the bit once we've started
+        pdTRUE,                           //  AND for any of the defined bits
+        portMAX_DELAY );                   //  block forever
+    
     // Note that if the stacks here are too big the tasks will not run BUT
     // the create error will not be shown!!
     
@@ -348,5 +378,9 @@ extern "C" void app_main(void)
                     NULL,              // Task handle
                     tskNO_AFFINITY)
         != pdPASS) assert("Failed to create GameEvent task");
-   
+
+    // Make task for I2S sound effects
+    if(xTaskCreate(i2s_write_task, "i2s_write_task", 4096, NULL, 5, NULL)
+        != pdPASS) assert ("Failed to create I2S Tx task");
+
 } // End of main now that work passed to three tasks
