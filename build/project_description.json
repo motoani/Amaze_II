@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "amaze_II",
-    "project_version":    "a924979-dirty",
+    "project_version":    "1c99e70-dirty",
     "project_path":       "C:/Users/adria/Documents/VS_ESP/Amaze_II",
     "idf_path":           "C:/Users/adria/esp/v5.3/esp-idf",
     "build_dir":          "C:/Users/adria/Documents/VS_ESP/Amaze_II/build",

@@ -35,12 +35,22 @@ extern EventGroupHandle_t raster_event_group;
 ////////////////////       Parameters from Lilygo and Bodmer's resources                  //////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// PCLK frequency can't go too high as the limitation of PSRAM bandwidth 2MHz
-// Datasheet suggests 66ns write cycle time which equates to 15Mhz
-// In my case I've set to use internal RAM - 10MHz fine, 20 MHZ write error
-#ifdef T_DISPLAY_S3_GAMER
+#if defined T_DISPLAY_S3_GAMER || defined T_DISPLAY_S3
+
+    // The actual pixels of the display unit
+    #ifdef T_DISPLAY_S3_GAMER
+    const uint32_t display_physical_height = 170;
+    const uint32_t display_physical_width = 320;
+    #else
+    const uint32_t display_physical_height = 320;
+    const uint32_t display_physical_width = 170;
+    #endif
+
     #define CONFIG_EXAMPLE_LCD_I80_BUS_WIDTH 8
 
+    // PCLK frequency can't go too high as the limitation of PSRAM bandwidth 2MHz
+    // Datasheet suggests 66ns write cycle time which equates to 15Mhz
+    // In my case I've set to use internal RAM - 10MHz fine, 20 MHZ write error
     #define EXAMPLE_LCD_PIXEL_CLOCK_HZ     (14 * 1000 * 1000)
 
     #define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL  1
@@ -69,6 +79,9 @@ extern EventGroupHandle_t raster_event_group;
 
 #ifdef T_QT_PRO
     #include "esp_lcd_gc9a01.h" // Component must be included in idf_component.yml
+
+    const uint32_t display_physical_height = 128;
+    const uint32_t display_physical_width = 128;
 
     #define EXAMPLE_LCD_PIXEL_CLOCK_HZ     (20 * 1000 * 1000)
     #define EXAMPLE_PIN_NUM_BK_LIGHT 10
@@ -112,16 +125,12 @@ static bool lcd_callback(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_ev
 extern "C" {
 #endif
 
-    // Aim to transfer a whole screen by DMA if possible
-    extern uint32_t display_physical_height;
-    extern uint32_t display_physical_width;
-
     //uint32_t max_transfer = (display_physical_height * display_physical_width * sizeof(uint16_t));
 
     
     void init_lcd_bus(esp_lcd_panel_io_handle_t *io_handle)
     {
-    #ifdef T_DISPLAY_S3_GAMER
+    #if defined T_DISPLAY_S3_GAMER || T_DISPLAY_S3
 
         ESP_LOGI(TAG, "Initialize Intel 8080 bus");
 
@@ -229,7 +238,7 @@ void init_lcd_panel(esp_lcd_panel_io_handle_t io_handle, esp_lcd_panel_handle_t 
     gpio_set_level((gpio_num_t) EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL);
 #endif // EXAMPLE_PIN_NUM_BK_LIGHT >= 0
 
-#ifdef T_DISPLAY_S3_GAMER
+#if defined T_DISPLAY_S3_GAMER || T_DISPLAY_S3
     ESP_LOGI(TAG, "Install LCD driver of st7789");
     esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = EXAMPLE_PIN_NUM_RST,
@@ -240,13 +249,21 @@ void init_lcd_panel(esp_lcd_panel_io_handle_t io_handle, esp_lcd_panel_handle_t 
 
     esp_lcd_panel_reset(* panel);
     esp_lcd_panel_init(* panel);
+ 
+ // Set rotation for T_Display_S3 with and without Gamer board
+#ifdef T_DISPLAY_S3_GAMER
     // Set inversion, x/y coordinate order, x/y mirror according to your LCD module spec
     ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(* panel, true));
-    ESP_ERROR_CHECK(esp_lcd_panel_mirror(* panel, true,false));
- 
+    ESP_ERROR_CHECK(esp_lcd_panel_mirror(* panel, true, false));
     // the gap is LCD panel specific, even panels with the same driver IC, can have different gap value
-    esp_lcd_panel_invert_color(* panel, true);
     ESP_ERROR_CHECK(esp_lcd_panel_set_gap(* panel,0,35)); // Trial and error
+#else // So must be T_DISPLAY_S3 in this nesting
+    ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(* panel, false));
+    ESP_ERROR_CHECK(esp_lcd_panel_mirror(* panel, false, false));
+    ESP_ERROR_CHECK(esp_lcd_panel_set_gap(* panel,30,0)); // Trial and error
+#endif
+
+    esp_lcd_panel_invert_color(* panel, true);
 
     // These set up parameters from Bodmer's TFT library ST7789_Init.h
     //------------------------------display and color format setting--------------------------------//
@@ -284,7 +301,8 @@ ESP_ERROR_CHECK(esp_lcd_panel_io_tx_param(io_handle,ST7789_NVGAMCTRL,(uint8_t[])
 
 // Now we are set up activate the display
 ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(*panel, true));
-#endif // End of T_DISPLAY_GAMER
+
+#endif // End of T_DISPLAY_S3
 
 #ifdef T_QT_PRO
 

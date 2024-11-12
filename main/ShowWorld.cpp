@@ -205,7 +205,7 @@ else
     Near_pix temp_event;
     const int8_t fall = (uint8_t)round(fallen);
     //ESP_LOGI(TAG,"Damage factor %f, %x",fallen,fall);
-    temp_event.event = EVNT_ENERGY | EE_CHANGE | ((0xff & fall) <<EVNT_NN_SHIFT); 
+    temp_event.event = EVNT_ENERGY | EE_CHANGE | ((0xff & fall) <<EVNT_NN_SHIFT) | EVNT_SOUND | (0x2 << ES_SHIFT); 
     if( xQueueSend( game_event_queue, ( void * ) &temp_event, ( TickType_t ) 10 ) != pdPASS )
       {
       // Failed to post the message, even after 10 ticks.
@@ -223,8 +223,10 @@ scaled_direction = direction * (float)frame_time * 0.005f;
 
 control_not_pressed = true; // Assume this to be the case
 
-static uint32_t last_event = 0;
-uint32_t this_event=0;
+// Store this and previous event
+static auto last_event = 0;
+auto this_event=0;
+static bool sound_impact = true;
 
 // Options for 2 or 3 button control
 #ifdef CONTROL_UP
@@ -235,6 +237,7 @@ uint32_t this_event=0;
   {
     bool found = false;
     control_not_pressed = false;
+
     // Going forwards check that the eye won't get too close to the world after next move
     // Steps become larger as they get closer as refresh time increases so there is a
     // chance of overshooting
@@ -261,34 +264,47 @@ uint32_t this_event=0;
       {
         // Use test_pix structure to derive event code via palette attributes
         this_event = test_pix.layout->palette[test_pix.layout->attributes[test_pix.idx]].event;
-
         // Check a valid event and also don't allow repeated messages for the same impact  
         if (this_event && (this_event != last_event))
         {
           last_event = this_event; // Note what happened previously
           test_pix.event = this_event; // Pass the event code since we've found it already
+          sound_impact = false; // Block a sound from this event impact until buttons up
           // Send Near_pix event messsage if present
           // Wait for 10 ticks for space to become available if necessary
           // This might need to be longer than frame duration?
           if( xQueueSend( game_event_queue, ( void * ) &test_pix, ( TickType_t ) 10 ) != pdPASS )
-          //if( xQueueSend( game_event_queue, ( void * ) &this_event, ( TickType_t ) 10 ) != pdPASS )
           {
             // Failed to post the message, even after 10 ticks.
             ESP_LOGI(TAG,"Failed to post item in event queue");
           }
         } // End of this_event detected
+        else
+        {
+          // It is a valid impact but not associated with an event so simply sound it
+          // but clear flag to stop it happening repeatedly
+          if (sound_impact && !this_event)
+          {
+            QueueSound(3);
+            sound_impact = false;
+          }
+        }
       } // end of found check
       else ESP_LOGI(TAG,"Impacted face not found"); // Should be rare occurance
 
       // Adjust this step so as not to go too far
       // The steps are reduced once we're in that close zone
       scaled_direction = (nearest - COLLISION_DISTANCE) * 0.2f * scaled_direction; 
-    } // End of nearest
+  } // End of nearest
 
     eye.x += scaled_direction.x;
     eye.z += scaled_direction.z; // Don't add on the y element of ther vector
   }
-  else last_event = 0; // reset event record when button lifted
+  else
+  {
+    sound_impact = true; // Re-allow impact sounds once buttons lifted 
+    last_event = 0; // reset event record when button lifted
+  }
 /*
 // Reverse is inhibited at the moment as it really needs code to 'look back'
 if (!gpio_get_level(CONTROL_DOWN))

@@ -47,21 +47,17 @@
 #define LO_PLAIN 0 // A static world 
 #define LO_FLIP 1  // Flip book with some sets of vertices 
 
+extern const uint32_t display_physical_height;
+extern const uint32_t display_physical_width;
+
 // The background colour for clearing screen which is made from fog
 extern constexpr uint32_t fog = 0x00303030;
 extern const uint16_t BackgroundColour = SwapBytes(((fog >> 8) & 0b1111100000000000) | ((fog >> 5) & 0b0000011111100000) | ((fog >> 3) & 0b0000000000011111));
 
-// The actual pixels of the display unit
-#ifdef T_DISPLAY_S3_GAMER
-    extern const uint32_t display_physical_height = 170;
-    extern const uint32_t display_physical_width = 320;
-
+#if defined T_DISPLAY_S3_GAMER || defined T_DISPLAY_S3
     const auto queue_size = 4500; // Size of each of 4 tri queues to rasterise
 #endif
 #ifdef T_QT_PRO
-    extern const uint32_t display_physical_height = 128;
-    extern const uint32_t display_physical_width = 128;
-
     // There's only 2MB PSRAM on the small unit
     const auto queue_size = 1800; // Size of each of 4 tri queues to rasterise
 #endif
@@ -70,8 +66,8 @@ extern const uint16_t BackgroundColour = SwapBytes(((fog >> 8) & 0b1111100000000
 // Basic aim is for 128 x 128 but will be reduced on smaller units that are only 128 at best
 // There are also limits on memory allocation for large screens which don't always post errors
 // This isn't robust for small screens either!
-extern constexpr auto g_scWidth = std::min( (uint32_t)128, 8 * ((display_physical_width - (gradbar_space + gradbar_w)) / 8) );
-extern constexpr auto g_scHeight = std::min( (uint32_t)128, display_physical_height);
+extern const auto g_scWidth = std::min( (uint32_t)128, 8 * ((display_physical_width - (gradbar_space + gradbar_w)) / 8) );
+extern const auto g_scHeight = std::min( (uint32_t)128, display_physical_height);
 
     uint32_t * world_dummy;
 
@@ -275,20 +271,12 @@ extern "C" void app_main(void)
 
      // Set the initial health bar via the event queue system
     Near_pix first_event;
-    first_event.event = EVNT_ENERGY | EE_SET | ( 0x79 << EVNT_NN_SHIFT) | EE_DISPLAY; // Start with 120  - actually 121 - energy so a life of 2 minutes
+    first_event.event = EVNT_ENERGY | EE_SET | EVNT_SOUND | (0x0 << ES_SHIFT) | ( 0x79 << EVNT_NN_SHIFT) | EE_DISPLAY; // Start with 120  - actually 121 - energy so a life of 2 minutes
     if( xQueueSend( game_event_queue, ( void * ) &first_event, ( TickType_t ) 10 ) != pdPASS )
           {
             // Failed to post the message, even after 10 ticks.
             ESP_LOGI(TAG,"Failed to post item in event queue");
           }
-
-    const uint16_t welcome_code = 0x0000;
-    // Send the welcome sound effect
-    if( xQueueSend( sound_event_queue, &welcome_code, ( TickType_t ) 10 ) != pdPASS )
-      {
-      // Failed to post the message, even after 10 ticks.
-      ESP_LOGI(TAG,"Failed to post item in sound queue");
-      }
 
     // Nearly everything is done, so see if the title screen can be removed yet
     while (esp_timer_get_time() < startup_time + 1000000);

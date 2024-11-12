@@ -9,8 +9,24 @@
 
 #include "esp_log.h" 
 
+//#include "structures.h"
+
 #include "i2s_sound.h" // Pin definitions etc
-#include "welcome.h" // Openining sound effect in 8 bits
+#include "sound_welcome.h" // Openning sound effect in 8 bits
+#include "sound_award.h" // Game award sound effect in 8 bits
+#include "sound_fall.h"
+#include "sound_wall.h"
+
+struct Sound_effects // Describes sound files
+{
+    int8_t * buffer; // Location of the sound buffer
+    uint16_t size;
+};
+
+struct Sound_effects sounds[4]= {{welcome_sound, WELCOME_SIZE},
+                            {award_sound, AWARD_SIZE},
+                            {fall_sound, FALL_SIZE},
+                            {wall_sound, WALL_SIZE}};
 
 // A larger buffer means that task will block for longer but doesn't need to come back so often!
 #define TX_BUFF_SIZE                    4096
@@ -44,7 +60,7 @@ void i2s_write_task(void *args)
     // Preload with silence before enabling the channel just in case there is noise in DMA buffers
     size_t w_bytes = sizeof(int16_t);
 
-    ESP_LOGI(TAG,"Preloading buffer"); // This will be done one I2S word at a time
+    //ESP_LOGI(TAG,"Preloading buffer"); // This will be done one I2S word at a time
 
     while (w_bytes == sizeof(int16_t)) 
     {
@@ -59,24 +75,24 @@ void i2s_write_task(void *args)
     // This is the endless RTOS task
     while (1)
     {
-        ESP_LOGI(TAG,"Running I2S buffer");
-        // Needs a trigger event wait here
+        //ESP_LOGI(TAG,"Waiting on I2S queue");
         // Block until a queue item is available
         xQueueReceive( sound_event_queue, & sound_code, portMAX_DELAY);
+        //ESP_LOGI(TAG,"Sound code %d",sound_code);
         // sound_code will dictate which effect played
 
-        static int read_count = 0;
+        int read_count = 0;
         int i2s_buffer_i = 0;
-        while (read_count < WELCOME_SIZE)
+        while (read_count < sounds[sound_code].size)
             {
             // Pack the sample into buffer
-            w_buf[i2s_buffer_i ++] = welcome[read_count++]<<7; // Make 8 bit audio into 16!
+            w_buf[i2s_buffer_i ++] = sounds[sound_code].buffer[read_count++]<<7; // Make 8 bit audio into 16!
             // Check if I2S buffer is full, or the last block and send if it is
-                if (i2s_buffer_i >= TX_BUFF_SIZE || (read_count == WELCOME_SIZE - 1))
+                if (i2s_buffer_i >= TX_BUFF_SIZE || (read_count == sounds[sound_code].size - 1))
                 {
                     ESP_ERROR_CHECK(i2s_channel_write(tx_chan, w_buf, i2s_buffer_i * sizeof(int16_t), &w_bytes,1000));
                     i2s_buffer_i = 0;
-                    ESP_LOGI(TAG,"Bytes sent %d",w_bytes);
+                    //ESP_LOGI(TAG,"Bytes sent %d",w_bytes);
                 }
             } // End of sending the whole sample
 

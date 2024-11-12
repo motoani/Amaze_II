@@ -27,6 +27,10 @@
 #define EVNT_FACES      0x20000000
     #define EF_DELETE   0x00100000  // Delete all faces with the exact same event code
 
+#define EVNT_SOUND      0x40000000  // Sound effects on an impact or other event
+    #define ES_MASK     0x000f0000  // Mask to reveal which of 16 sounds to play 
+    #define ES_SHIFT    16          // How much to shift to get the sound code
+
 #include <stdint.h>
 #include "structures.h"
 
@@ -41,5 +45,7 @@ void OverlayTwoD(TwoD_overlay & this_overlay);
 void StopOverlayTwoD(TimerHandle_t tracked_handle);
 
 void MakeNumber(uint16_t font_index, uint16_t score, TwoD_overlay & this_overlay);
+
+void QueueSound(uint16_t sound_code);
 
 

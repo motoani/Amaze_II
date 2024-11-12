@@ -29,8 +29,9 @@ During the project I've used fonts and textures from various free-for-non-commer
 - Bookcase: https://pngtree.com/freepng/illustrated-bookcase-sticker-vector_11083205.html
 - Food low poly modified from: https://assetstore.unity.com/packages/3d/props/food/food-free-low-poly-asset-pack-by-ithappy-260726
 - Welcome sound effect: https://pixabay.com/sound-effects/welcome-traveler-97167/
-
-
+- Game bonus: https://pixabay.com/sound-effects/game-bonus-144751/
+- Fall onto gravel: https://mixkit.co/free-sound-effects/falling/
+- Wall hit: https://pixabay.com/sound-effects/foley-slamming-wall-processed-48khz-16bit-95739/
 
 ## How it works
 
@@ -40,7 +41,7 @@ The code is well commented but here's a narrative of waht is going on in the pro
 
 There are two main tasks each allocated to an ESP32 core. Core 0 identifies which triangles should be projected from 'chunks', does the projection and places triangles and tiles onto queues. Simultaneously Core 1 rasterises the queues into ping-pong frame buffers. 
 
-Small RTOS tasks are also running for managing gameplay events and once per second information. These should not use floating point operations so as not to require additional register saves on task switching.
+Small RTOS tasks are also running for managing gameplay events, a sound effects queue and once per second information. These should not use floating point operations so as not to require additional register saves on task switching.
 
 Presently the ESP-IDF API for DMA is used to send parallel data to the Lilygo T-display TFT unit without the use of a library overlay. At present the program will NOT work on SPI-interfaced displays without modification of the code.
 
@@ -71,6 +72,7 @@ Game play events are managed via a queue and are based on a 32bit code being ass
 The current events include:
 - Changing player energy and related displays
 - Deleting triangles from the world
+- Initiating a sound
 
 This small selection allows the player's life to be extended or reduced and objects to be removed on impact. Importantly, removed objects are deleted from the chunk database in PSRAM and so overhead is reduced in future frames.
 
@@ -79,6 +81,12 @@ To a limited degree the options can be OR'd to allow multiple actions per event 
 The system allows some space for extension for other actions and those planned include:
 - Activating animations
 - Teleport to a new world
+
+### Sound effects
+
+Sound is sent via the I2S DMA in the SDK and is triggered by entries in an RTOS queue. The code of the sound effect is queued and then used to retrieve the buffer. Sounds are 8 bit uinsigned and shifted to 16bit mono for playing. Sampling is at 8000 samples/second which doesn't give great quality but allows the DMA to run fow longer with a given buffer size.
+
+Sounds can be triggered by event codes or from elsewhere in the code.
 
 ## Building a world
 

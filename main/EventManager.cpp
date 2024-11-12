@@ -110,6 +110,7 @@ void GetGameEvent(void * parameter)
                 {
                     // Make a buffer that has digits as raster
                     MakeNumber(1,((event_code & EVNT_NN_MASK) >> EVNT_NN_SHIFT), score_overlay);
+                    QueueSound(1);
                     // Show the overlay
                     // ESP_LOGI(TAG,"Show top-ups of energy");
                     // Start the popup removal timer now
@@ -127,10 +128,16 @@ void GetGameEvent(void * parameter)
             EvntDeleteFaces(this_event_pix); // Delete the item impacted
             }
         } // End of EVNT_FACES
+
+        if (event_code & EVNT_SOUND) // Trigger a sound effect
+            {
+                // Extract the nibble that says which sound to send and pass that 
+                QueueSound((event_code & ES_MASK)>>ES_SHIFT);
+            }
     //taskYIELD();
     } // End of infinite while loop
  } // End of GetGameEvent
-
+ 
 // Delete all of the faces from chunk lists that have the same event code throughout this layout
 // Works through ALL frames of ALL world layouts
 void EvntDeleteFaces(Near_pix this_event_pix)
@@ -328,3 +335,16 @@ void MakeNumber(uint16_t font_index, uint16_t score, TwoD_overlay & this_overlay
     this_overlay.height = nesto[font_index].height;
     //ESP_LOGI(TAG,"Height %d and width %d",(int)this_overlay.height,(int)this_overlay.width);
 } // End of MakeNumber
+
+// Push a sound code into the queue for I2S sound output
+void QueueSound(uint16_t sound_code)
+{
+static const char *TAG = "QueueSound";
+
+if( xQueueSend( sound_event_queue, &sound_code, ( TickType_t ) 10 ) != pdPASS )
+{
+    // Failed to post the message, even after 10 ticks.
+    ESP_LOGI(TAG,"Failed to post item in sound queue");
+}
+
+}// End of QueueSound

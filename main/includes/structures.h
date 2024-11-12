@@ -2,9 +2,10 @@
 
 // World parameters and structures
 #include <stdint.h>
-#include "geometry.h"
-#include "globals.h"
-#include <vector>
+
+    #include "geometry.h"
+    #include "globals.h"
+    #include <vector> // Can't go into .c sources
 
 struct Font_numbers // Describes a bitmapped font
 {
