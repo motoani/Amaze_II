@@ -43,6 +43,7 @@
 #include "TimeTracker.h"
 #include "EventManager.h"
 #include "i2s_sound.h"
+#include "FindSounds.h"
 
 #define LO_PLAIN 0 // A static world 
 #define LO_FLIP 1  // Flip book with some sets of vertices 
@@ -250,10 +251,24 @@ extern "C" void app_main(void)
     // Uses a ragged array to give offsets of world layouts in the partition
     ParseWorld ( w_ptr , texture_map_ptr );
 
-    // Use the partition pointers to read the ROM world descriptors into a
-    // structure of pointers, calculating the values from offsets for each case    
-    //ReadWorld(w_map_ptr , world_header_ptr , texture_map_ptr);
-    //ReadWorld(w_ptr , texture_map_ptr);
+    // Do similar task for sound samples in the sound partition
+    ESP_LOGI(TAG,"Finding partition for sounds and mapping memmory");
+    // Find the partition map in the partition table for sounds
+    const esp_partition_t *s_partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, "sounds");
+    assert(s_partition != NULL);
+
+    const void *sound_map_ptr;
+    //uint8_t * tex_ptr; // Use a byte wise at present
+    esp_partition_mmap_handle_t s_map_handle;
+
+    // Map the sound partition to data memory
+    ESP_ERROR_CHECK(esp_partition_mmap(s_partition, 0, s_partition->size, ESP_PARTITION_MMAP_DATA, &sound_map_ptr, &s_map_handle));
+    ESP_LOGI(TAG, "Mapped sound partition to data memory address %p", sound_map_ptr);
+    unsigned int s_size = s_partition->size;
+    ESP_LOGI(TAG, "Sound partition is of size %x", s_size);
+
+    // Scan the sounds partition for wavs
+    FindSounds((void *)sound_map_ptr);
 
     // Initialise the I2S Tx system
     i2s_init_std_simplex();
@@ -270,6 +285,7 @@ extern "C" void app_main(void)
     if( sound_event_queue == 0 ) assert("Creation of sound event queue failed");
 
      // Set the initial health bar via the event queue system
+     // and play an intro sound
     Near_pix first_event;
     first_event.event = EVNT_ENERGY | EE_SET | EVNT_SOUND | (0x0 << ES_SHIFT) | ( 0x79 << EVNT_NN_SHIFT) | EE_DISPLAY; // Start with 120  - actually 121 - energy so a life of 2 minutes
     if( xQueueSend( game_event_queue, ( void * ) &first_event, ( TickType_t ) 10 ) != pdPASS )

@@ -7,26 +7,14 @@
 #include "esp_check.h"
 #include "sdkconfig.h"
 
+#include <vector>
+
 #include "esp_log.h" 
 
-//#include "structures.h"
+#include "structures.h"
 
 #include "i2s_sound.h" // Pin definitions etc
-#include "sound_welcome.h" // Openning sound effect in 8 bits
-#include "sound_award.h" // Game award sound effect in 8 bits
-#include "sound_fall.h"
-#include "sound_wall.h"
 
-struct Sound_effects // Describes sound files
-{
-    int8_t * buffer; // Location of the sound buffer
-    uint16_t size;
-};
-
-struct Sound_effects sounds[4]= {{welcome_sound, WELCOME_SIZE},
-                            {award_sound, AWARD_SIZE},
-                            {fall_sound, FALL_SIZE},
-                            {wall_sound, WALL_SIZE}};
 
 // A larger buffer means that task will block for longer but doesn't need to come back so often!
 #define TX_BUFF_SIZE                    4096
@@ -36,18 +24,16 @@ static i2s_chan_handle_t                tx_chan;        // I2S tx channel handle
 
 extern QueueHandle_t sound_event_queue; // A FreeRTOS queue to pass sound initiators
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 void i2s_write_task(void *args)
 {
     static const char *TAG = "i2s write task";
+    extern std::vector<Dot_wav *> sounds; // A vector of wav header ptrs
    
     uint16_t sound_code = 0; // Will be set up by the queue
-    // The main application sound buffer, couldthis be skipped
+    // The main application sound buffer, could this be skipped
     // and play flash from ROM directly
-    int16_t *w_buf = (int16_t *)calloc(1, TX_BUFF_SIZE *  sizeof(int16_t));
-    assert(w_buf); // Check if w_buf allocation success
+    //int16_t *w_buf = (int16_t *)calloc(1, TX_BUFF_SIZE *  sizeof(int16_t));
+    //assert(w_buf); // Check if w_buf allocation success
 
     // A quiet buffer to flush at end of valid output
     int16_t *quiet_buf = (int16_t *)calloc(1, QUIET_SIZE *  sizeof(int16_t));
@@ -75,45 +61,48 @@ void i2s_write_task(void *args)
     // This is the endless RTOS task
     while (1)
     {
-        //ESP_LOGI(TAG,"Waiting on I2S queue");
+        ESP_LOGI(TAG,"Waiting on I2S queue");
         // Block until a queue item is available
         xQueueReceive( sound_event_queue, & sound_code, portMAX_DELAY);
-        //ESP_LOGI(TAG,"Sound code %d",sound_code);
+        ESP_LOGI(TAG,"Sound code %d",sound_code);
         // sound_code will dictate which effect played
 
+        if (sound_code >= sounds.size()) // Check if requested sound is in range
+        {
+            ESP_LOGI(TAG,"Requested sound %d is out of range",(int)sound_code);
+            continue; // Skip this loop
+        }
+
+        // Play directly from flash partition
+        ESP_ERROR_CHECK(i2s_channel_write(tx_chan, sounds.at(sound_code)->SampledData, sounds.at(sound_code)->DataSize, &w_bytes,1000));
+
+/*
         int read_count = 0;
         int i2s_buffer_i = 0;
-        while (read_count < sounds[sound_code].size)
+        while (read_count < sounds.at(sound_code).size)
             {
             // Pack the sample into buffer
-            w_buf[i2s_buffer_i ++] = sounds[sound_code].buffer[read_count++]<<7; // Make 8 bit audio into 16!
+            w_buf[i2s_buffer_i ++] = sounds.at(sound_code).buffer[read_count++];
             // Check if I2S buffer is full, or the last block and send if it is
                 if (i2s_buffer_i >= TX_BUFF_SIZE || (read_count == sounds[sound_code].size - 1))
                 {
                     ESP_ERROR_CHECK(i2s_channel_write(tx_chan, w_buf, i2s_buffer_i * sizeof(int16_t), &w_bytes,1000));
                     i2s_buffer_i = 0;
-                    //ESP_LOGI(TAG,"Bytes sent %d",w_bytes);
+                    ESP_LOGI(TAG,"Bytes sent %d",w_bytes);
                 }
             } // End of sending the whole sample
-
-        //ESP_LOGI(TAG,"Silence flush");
+*/
+        ESP_LOGI(TAG,"Silence flush");
         // Finish with silence flush
         // One word wasn't enough, thsi is more than DMA buffers....
         ESP_ERROR_CHECK(i2s_channel_write(tx_chan, quiet_buf, QUIET_SIZE * sizeof(int16_t), &w_bytes,1000));
         //vTaskDelay(50 / portTICK_PERIOD_MS);
     } // End of infinite while loop
     // Will never get here, but good practice to write it like this
-    free(w_buf);
+    //free(w_buf);
     vTaskDelete(NULL);
 } // End of write task
-#ifdef __cplusplus
-}
-#endif
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 void i2s_init_std_simplex(void)
 {
     static const char *TAG = "I2S init";
@@ -132,7 +121,7 @@ void i2s_init_std_simplex(void)
      * These two helper macros are defined in 'i2s_std.h' which can only be used in STD mode.
      * They can help to specify the slot and clock configurations for initialization or re-configuring */
     i2s_std_config_t tx_std_cfg = {
-        .clk_cfg  = I2S_STD_CLK_DEFAULT_CONFIG(8000),
+        .clk_cfg  = I2S_STD_CLK_DEFAULT_CONFIG(16000),
         .slot_cfg = I2S_STD_MSB_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO),
         .gpio_cfg = {
             .mclk = I2S_GPIO_UNUSED,    // some codecs may require mclk signal, this example doesn't need it
@@ -149,7 +138,5 @@ void i2s_init_std_simplex(void)
     };
     ESP_ERROR_CHECK(i2s_channel_init_std_mode(tx_chan, &tx_std_cfg));
 } // End of i2s_init_std_simplex
-#ifdef __cplusplus
-}
-#endif
+
 

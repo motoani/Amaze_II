@@ -17,7 +17,8 @@ idf_component_register(
         "FindHitFace.cpp"  
         "TimeTracker.cpp"
         "EventManager.cpp"
-        "i2s_sound.c"  
+        "i2s_sound.cpp"
+        "FindSounds.cpp"
        
     INCLUDE_DIRS
         "."
