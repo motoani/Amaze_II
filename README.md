@@ -35,7 +35,7 @@ During the project I've used fonts and textures from various free-for-non-commer
 
 ## How it works
 
-The code is well commented but here's a narrative of waht is going on in the program.
+The code is well commented but here's a narrative of what is going on in the program.
 
 ### Tasks and cores
 
