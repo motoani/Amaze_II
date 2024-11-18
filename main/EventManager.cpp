@@ -110,7 +110,7 @@ void GetGameEvent(void * parameter)
                 {
                     // Make a buffer that has digits as raster
                     MakeNumber(1,((event_code & EVNT_NN_MASK) >> EVNT_NN_SHIFT), score_overlay);
-                    QueueSound(1);
+                    //QueueSound(1); // Award sound played here but should be driven by EVENT CODE in world
                     // Show the overlay
                     // ESP_LOGI(TAG,"Show top-ups of energy");
                     // Start the popup removal timer now

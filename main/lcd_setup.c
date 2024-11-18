@@ -43,7 +43,7 @@ extern EventGroupHandle_t raster_event_group;
     const uint32_t display_physical_width = 320;
     #else
     const uint32_t display_physical_height = 320;
-    const uint32_t display_physical_width = 170;
+    const uint32_t display_physical_width = 180; // 170 stated, issues with clearing far RHS of screen..., ST7789 has 240 memory locations
     #endif
 
     #define CONFIG_EXAMPLE_LCD_I80_BUS_WIDTH 8
@@ -243,11 +243,13 @@ void init_lcd_panel(esp_lcd_panel_io_handle_t io_handle, esp_lcd_panel_handle_t 
     esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = EXAMPLE_PIN_NUM_RST,
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
+        .data_endian = LCD_RGB_DATA_ENDIAN_LITTLE,
         .bits_per_pixel = 16,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_st7789(io_handle, &panel_config, panel));
 
     esp_lcd_panel_reset(* panel);
+    vTaskDelay(6/portTICK_PERIOD_MS); // Allow at least 5ms when not in sleep mode
     esp_lcd_panel_init(* panel);
  
  // Set rotation for T_Display_S3 with and without Gamer board
@@ -265,8 +267,8 @@ void init_lcd_panel(esp_lcd_panel_io_handle_t io_handle, esp_lcd_panel_handle_t 
 
     esp_lcd_panel_invert_color(* panel, true);
 
-    // These set up parameters from Bodmer's TFT library ST7789_Init.h
-    //------------------------------display and color format setting--------------------------------//
+// These set up parameters from Bodmer's TFT library ST7789_Init.h
+//------------------------------display and color format setting--------------------------------//
 //writecommand(ST7789_MADCTL);
 //writedata(TFT_MAD_COLOR_ORDER);
 
@@ -310,18 +312,19 @@ ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(*panel, true));
         .reset_gpio_num = TFT_RST,
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,
         .bits_per_pixel = 16,
-    }; // It should be possible to set Endian here but can't work out API
+    }; // This driver does not seem to handle little endian so swapbytes included
     ESP_LOGI(TAG, "Install GC9A01 panel driver");
     ESP_ERROR_CHECK(esp_lcd_new_panel_gc9a01(io_handle, &panel_config, panel));
 
     ESP_ERROR_CHECK(esp_lcd_panel_reset(* panel));
+    vTaskDelay(1/portTICK_PERIOD_MS); // Datasheet doesn't state a pause period
     ESP_ERROR_CHECK(esp_lcd_panel_init(* panel));
     ESP_ERROR_CHECK(esp_lcd_panel_invert_color(* panel, true));
     // Rotate LCD display to suit buttons
     //ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(* panel, false));
     ESP_ERROR_CHECK(esp_lcd_panel_mirror(* panel, true, true));
     
-    ESP_ERROR_CHECK(esp_lcd_panel_set_gap(* panel,2,2)); // Trial and error to centre
+    ESP_ERROR_CHECK(esp_lcd_panel_set_gap(* panel,2,1)); // Trial and error to centre
 
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(* panel, true));
 

@@ -114,7 +114,9 @@ extern "C" void app_main(void)
     uint16_t *pix = (uint16_t *)(((uintptr_t)mem + EXAMPLE_PSRAM_DATA_ALIGNMENT - 1) & ~ (uintptr_t)(EXAMPLE_PSRAM_DATA_ALIGNMENT - 1));
     // The below should work better without cache etc but it leaves screen gaps
     //uint16_t * pix = (uint16_t *)heap_caps_aligned_alloc(0x04 , sizeof(uint16_t) * EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES , MALLOC_CAP_DMA);
-    if ( mem == NULL) assert("malloc for full screen buffer failed");
+    //uint16_t * pix = (uint16_t *)heap_caps_aligned_alloc(0x04 , sizeof(uint16_t) * display_physical_height * display_physical_width , MALLOC_CAP_DMA);
+    //pix = (uint16_t *)heap_caps_malloc(sizeof(uint16_t) * display_physical_height * display_physical_width , MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA | MALLOC_CAP_32BIT);
+    if ( mem == NULL || pix == NULL) assert("malloc for full screen buffer failed");
 
     // Make frame buffers
     frame_buffer_A = (uint16_t *)heap_caps_malloc(sizeof(uint16_t) * g_scWidth * g_scHeight , MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA | MALLOC_CAP_32BIT);
@@ -163,6 +165,9 @@ extern "C" void app_main(void)
         
     ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, display_physical_width, display_physical_height, pix));
     ESP_LOGI(TAG, "Clear screen and title pixels sent");
+    // Release the full screen buffer before some other buffers allocated
+    // May be helpful in devices such as QTPRO with limited PSRAM
+    //free(mem);
     
     ESP_LOGI(TAG, "Set up buttons on GPIO");
     // Set up the game board for play
@@ -271,7 +276,7 @@ extern "C" void app_main(void)
     FindSounds((void *)sound_map_ptr);
 
     // Initialise the I2S Tx system
-    i2s_init_std_simplex();
+    i2s_init();
 
     // Make a queue which will take event words generated during play and apss to a manager
     // Create a queue capable of containing 10 Near_pix values which say a lot about the impact
@@ -333,9 +338,13 @@ extern "C" void app_main(void)
     
     // Flush the cache to move data to RAM where the DMA can pick it up
     ESP_ERROR_CHECK(esp_cache_msync((void *)pix, (size_t) sizeof(uint16_t) * display_physical_width * display_physical_height, ESP_CACHE_MSYNC_FLAG_DIR_C2M));
-    
     ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, display_physical_width, display_physical_height, pix));
-    ESP_LOGI(TAG, "Final clear screen sent");
+    
+/*
+   // Just clear the title area using an already blank frame buffer now mem/pix has been freed
+    ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, g_scWidth, g_scHeight, frame_buffer_A));
+*/
+    ESP_LOGI(TAG, "Pre-game clear screen sent");
 
     // Check previous DMA completed before allowing 1st world drawing, which may interfere
     // as it's empty, and so frame sent rapidly

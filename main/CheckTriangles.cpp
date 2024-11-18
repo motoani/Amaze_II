@@ -96,8 +96,9 @@ float BaseTriangles(const Vec3f eye, const Vec3f direction, const uint32_t this_
     // Projection calculation removed as a simple othographic view will be used
     const uint16_t* this_list = layo_ptr->TheChunks[this_chunk].faces_ptr; // fetch the list of faces applicable to this chunk
 
-    // Currently there is no knowledge of whether there is more than one triangle beneath eye
-    // so the height returned simply reflects the last that was hit from the list
+    // An attempt is made to manage more than one height at a given location by
+    // checking for the highest face that is below eye level
+
     for (uint32_t get_face = 0; get_face < layo_ptr->TheChunks[this_chunk].face_count; get_face++)
     {
         // The chunk list is a subset of all triangles so pull the global index for rendering
@@ -138,6 +139,7 @@ float BaseTriangles(const Vec3f eye, const Vec3f direction, const uint32_t this_
                 // The area is only needed if eye is inside the base triangle
                 float oneoverarea = 1 / (edge_function(v0, v1, v2)); // Area of the triangle multiplied by 2
                 // Barycentric coordinates are the areas of the sub-triangles divided by the area of the main triangle
+                // The following 3 multiplication can be simplified to one
                 //w0 *= oneoverarea;
                 //w1 *= oneoverarea;
                 //w2 *= oneoverarea;
@@ -150,7 +152,14 @@ float BaseTriangles(const Vec3f eye, const Vec3f direction, const uint32_t this_
                 {
                     // Now keep the highest of the previous best_height and that just found
                     // and update this_height as we have an acceptable match
-                    this_height = best_height = std::max(best_height,found_height);    
+                    this_height = best_height = std::max(best_height,found_height);
+                }
+                else
+                {
+                    // Action if face is above eye?
+                    // RARELY the viewer becomes below the base but then can't raise out...
+                    // Take the smallest found, seems to work for bridges and simple
+                    this_height = best_height = std::min(best_height,found_height);
                 }
             } // End of overlap test
         }
@@ -159,7 +168,7 @@ float BaseTriangles(const Vec3f eye, const Vec3f direction, const uint32_t this_
         }
     // There is no explicit action if a face is NOT matched, last static value returned
     } // End of loop through triangles
-    return(this_height); // Return the spot height from the underlying triangle
+return(this_height); // Return the spot height from the underlying triangle
 } // End of BaseTriangles 
 
 uint32_t CheckTriangles(const Vec3f eye, const Vec3f direction, const uint32_t this_chunk, const WorldLayout* layo_ptr)

@@ -5,6 +5,8 @@
 #include "esp_random.h"
 //#include "esp_dsp.h"
 
+#include "amaze_II_main.h"
+
 #include "globals.h"
 #include "geometry.h"
 #include "structures.h"
@@ -429,11 +431,19 @@ void NotRasteriseBox(const TriToRaster & tri)
 // Function to write pixels to a buffer, mixes the rgb with fog based on depth
 // No merit being in IRAM
 
+// It seems essential to swapbytes however the driver is set up for BGR/RGB and ENDIAN
 uint16_t SwapBytes(uint16_t wordin)
 {
-    uint16_t temp = 0x00ff & (wordin >> 8);
-    temp = temp | (0xff00 & (wordin << 8));
+    #ifdef T_QT_PRO
+        uint16_t temp = 0x00ff & (wordin >> 8);
+        temp = temp | (0xff00 & (wordin << 8));
     return (temp);
+    #endif
+
+    // Hopefully the compiler will optimise this non-function away
+    #if defined T_DISPLAY_S3_GAMER || defined T_DISPLAY_S3
+        return(wordin);
+    #endif
 }
 
 void WritePixel2Fog888(const uint32_t frame_index, const uint32_t rgb888, const float depth)
@@ -469,13 +479,17 @@ void WritePixel2Fog888(const uint32_t frame_index, const uint32_t rgb888, const 
     const uint32_t fogged_blue = intmix(fog_blue , pix_blue , fog_depth);
     
     // Shift to divide by 'a' in intmix
-    //uint16_t rgb565 = ((fogged_red) & 0b1111100000000000) | ((fogged_green >> 5) & 0b0000011111100000) | ((fogged_blue >> 11) & 0b0000000000011111);
-    uint16_t swapped_rgb565 = ((fogged_red >> 8) & 0b0000000011111000) | ((fogged_green >> 13) & 0b0000000000000111) |  ((fogged_green << 3) & 0b1110000000000000) | ((fogged_blue >> 3) & 0b0001111100000000);
-    
+    #ifdef T_QT_PRO
+        // This swaps the byte order whilst building
+        uint16_t rgb565 = ((fogged_red >> 8) & 0b0000000011111000) | ((fogged_green >> 13) & 0b0000000000000111) |  ((fogged_green << 3) & 0b1110000000000000) | ((fogged_blue >> 3) & 0b0001111100000000);
+    #endif
+    #if defined T_DISPLAY_S3_GAMER || defined T_DISPLAY_S3
+        uint16_t rgb565 = ((fogged_red) & 0b1111100000000000) | ((fogged_green >> 5) & 0b0000011111100000) | ((fogged_blue >> 11) & 0b0000000000011111);
+    #endif
     // Using ESP-IDF the DMA routine will do the byte swap so here can be standard pack to 565
     // We have a pixel in 565 format so send it to the appropriate viewer
-    //frame_buffer_this[frame_index] = SwapBytes(rgb565);
-    frame_buffer_this[frame_index] = swapped_rgb565;
+    // Introduced a swap for compatibility with QT PRO driver
+    frame_buffer_this[frame_index] = rgb565; // Which will be swapped for T_QT_PRO
 } // end of WritePixel2Fog888
 
 // adjusts input rgb according to surface shade for simple specular and diffuse illumination
