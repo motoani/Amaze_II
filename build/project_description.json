@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "amaze_II",
-    "project_version":    "ed05814-dirty",
+    "project_version":    "e86a79f-dirty",
     "project_path":       "C:/Users/adria/Documents/VS_ESP/Amaze_II",
     "idf_path":           "C:/Users/adria/esp/v5.3/esp-idf",
     "build_dir":          "C:/Users/adria/Documents/VS_ESP/Amaze_II/build",
@@ -1195,7 +1195,7 @@
             "managed_reqs": [],
             "managed_priv_reqs": [ "espressif__esp_lcd_gc9a01" ],
             "file": "C:/Users/adria/Documents/VS_ESP/Amaze_II/build/esp-idf/main/libmain.a",
-            "sources": [ "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/amaze_II_main", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ShowWorld.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ClipBound.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/CameraWork.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/CheckTriangles.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ShowError.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/TriangleQueues.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/wr_gpio.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ChunkChooser.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/RasteriseBox.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/lcd_setup.c", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ParseWorld.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/FindHitFace.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/TimeTracker.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/EventManager.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/i2s_sound.c" ],
+            "sources": [ "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/amaze_II_main", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ShowWorld.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ClipBound.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/CameraWork.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/CheckTriangles.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ShowError.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/TriangleQueues.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/wr_gpio.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ChunkChooser.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/RasteriseBox.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/lcd_setup.c", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/ParseWorld.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/FindHitFace.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/TimeTracker.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/EventManager.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/i2s_sound.cpp", "C:/Users/adria/Documents/VS_ESP/Amaze_II/main/FindSounds.cpp" ],
             "include_dirs": [ ".", "includes" ]
         },
         "mbedtls": {

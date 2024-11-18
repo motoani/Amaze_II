@@ -84,9 +84,9 @@ The system allows some space for extension for other actions and those planned i
 
 ### Sound effects
 
-Sound is sent via the I2S DMA in the SDK and is triggered by entries in an RTOS queue. The code of the sound effect is queued and then used to retrieve the buffer. Sounds are 8 bit uinsigned and shifted to 16bit mono for playing. Sampling is at 8000 samples/second which doesn't give great quality but allows the DMA to run fow longer with a given buffer size.
+Sound is sent via the I2S DMA in the SDK and is triggered by entries in an RTOS queue. This queue can be entered from core code or via elements noted in the EVENT system. The code of the sound effect is queued and then used to retrieve the buffer. 
 
-Sounds can be triggered by event codes or from elsewhere in the code.
+Sounds are presented as concatenated .wav files in the 'sounds' partition. They must be 16 bit mono at 16kHz sampling or they will not be recognised. Sounds in the partition are indexed from zero an this allows them to be identified for playback. Index numbers beyond those registered are ignored.
 
 ## Building a world
 
